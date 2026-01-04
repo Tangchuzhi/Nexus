@@ -13,6 +13,20 @@ init_version_cache() {
 # 缓存工具函数
 # ============================================
 
+# 获取文件修改时间
+get_file_mtime() {
+    local file="$1"
+    
+    if [ ! -f "$file" ]; then
+        echo "0"
+        return
+    fi
+    
+    # 尝试不同的 stat 命令格式
+    local mtime=$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null || echo "0")
+    echo "$mtime"
+}
+
 # 检查缓存是否过期
 is_cache_expired() {
     local cache_file="$1"
@@ -21,7 +35,9 @@ is_cache_expired() {
         return 0  # 文件不存在，视为过期
     fi
     
-    local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)))
+    local current_time=$(date +%s)
+    local file_mtime=$(get_file_mtime "$cache_file")
+    local cache_age=$((current_time - file_mtime))
     
     if [ $cache_age -ge $CACHE_TIMEOUT ]; then
         return 0  # 过期
@@ -50,21 +66,21 @@ get_st_remote_version() {
     
     # 如果缓存未过期，直接返回
     if ! is_cache_expired "$cache_file"; then
-        cat "$cache_file"
+        cat "$cache_file" 2>/dev/null || echo ""
         return
     fi
     
-    # 缓存过期，静默更新
-    local version=$(curl -s --connect-timeout 3 --max-time 5 \
+    # 缓存过期，同步更新
+    local version=$(timeout 5 curl -s --connect-timeout 3 \
         "https://api.github.com/repos/SillyTavern/SillyTavern/releases/latest" \
-        | jq -r '.tag_name' 2>/dev/null)
+        2>/dev/null | jq -r '.tag_name' 2>/dev/null)
     
     if [ -n "$version" ] && [ "$version" != "null" ]; then
         echo "$version" > "$cache_file"
         echo "$version"
     else
         # 网络失败，返回旧缓存
-        [ -f "$cache_file" ] && cat "$cache_file" || echo ""
+        cat "$cache_file" 2>/dev/null || echo ""
     fi
 }
 
@@ -72,27 +88,27 @@ get_st_remote_version() {
 # Nexus 版本管理
 # ============================================
 
-# 获取 Nexus 远程版本（带智能缓存）
+# 获取 Nexus 远程版本
 get_nexus_remote_version() {
     local cache_file="$CACHE_DIR/nexus_version"
     
     # 如果缓存未过期，直接返回
     if ! is_cache_expired "$cache_file"; then
-        cat "$cache_file"
+        cat "$cache_file" 2>/dev/null || echo ""
         return
     fi
     
-    # 缓存过期，静默更新
-    local version=$(curl -s --connect-timeout 3 --max-time 5 \
+    # 缓存过期，同步更新
+    local version=$(timeout 5 curl -s --connect-timeout 3 \
         "https://raw.githubusercontent.com/Tangchuzhi/Nexus/main/VERSION" \
-        | tr -d '[:space:]')
+        2>/dev/null | tr -d '[:space:]')
     
     if [ -n "$version" ]; then
         echo "$version" > "$cache_file"
         echo "$version"
     else
         # 网络失败，返回旧缓存
-        [ -f "$cache_file" ] && cat "$cache_file" || echo ""
+        cat "$cache_file" 2>/dev/null || echo ""
     fi
 }
 
@@ -119,19 +135,6 @@ refresh_version_cache() {
     show_success "版本信息已刷新"
 }
 
-# 静默刷新版本缓存（后台更新，不显示提示）
-silent_refresh_version_cache() {
-    # 检查 ST 缓存
-    if is_cache_expired "$CACHE_DIR/st_version"; then
-        get_st_remote_version > /dev/null 2>&1 &
-    fi
-    
-    # 检查 Nexus 缓存
-    if is_cache_expired "$CACHE_DIR/nexus_version"; then
-        get_nexus_remote_version > /dev/null 2>&1 &
-    fi
-}
-
 # 获取 SillyTavern 状态
 get_st_status() {
     if pgrep -f "node.*server.js" > /dev/null 2>&1; then
@@ -150,7 +153,9 @@ get_cache_remaining_time() {
         return
     fi
     
-    local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null || echo 0)))
+    local current_time=$(date +%s)
+    local file_mtime=$(get_file_mtime "$cache_file")
+    local cache_age=$((current_time - file_mtime))
     local remaining=$((CACHE_TIMEOUT - cache_age))
     
     if [ $remaining -le 0 ]; then
