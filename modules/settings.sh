@@ -14,16 +14,18 @@ settings_menu() {
         echo ""
         echo "  [1] 备份与恢复"
         echo "  [2] 卸载管理"
-        echo "  [3] 故障排查"
+        echo "  [3] 自启动管理" 
+        echo "  [4] 故障排查"
         echo "  [0] 返回主菜单"
         echo ""
         
-        read -p "$(colorize "请选择 [0-3]: " "$COLOR_CYAN")" choice
+        read -p "$(colorize "请选择 [0-4]: " "$COLOR_CYAN")" choice
         
         case $choice in
             1) backup_menu ;;
             2) uninstall_menu ;;
-            3) troubleshoot_menu ;;
+            3) autostart_menu ;;  
+            4) troubleshoot_menu ;;
             0) return ;;
             *) show_error "无效选项" ;;
         esac
@@ -455,6 +457,107 @@ uninstall_nexus() {
     show_info "感谢使用 Nexus，晚安！"
     exit 0
 }
+
+# ============================================
+# 自启动管理
+# ============================================
+
+autostart_menu() {
+    clear
+    show_header
+    colorize "🚀 自启动管理" "$COLOR_BOLD"
+    echo "───────────────────────────────────────"
+    echo ""
+    
+    # 检查当前状态
+    local bashrc="$HOME/.bashrc"
+    local autostart_marker="# Nexus Auto-Start"
+    local is_enabled=false
+    
+    if grep -q "$autostart_marker" "$bashrc" 2>/dev/null; then
+        is_enabled=true
+    fi
+    
+    # 显示状态
+    if [ "$is_enabled" == true ]; then
+        show_success "当前状态: 已启用"
+        echo ""
+        echo "  每次打开 Termux 将自动启动 Nexus"
+    else
+        show_warning "当前状态: 已禁用"
+        echo ""
+        echo "  需要手动输入 'nexus' 启动"
+    fi
+    
+    echo ""
+    echo "───────────────────────────────────────"
+    echo ""
+    
+    if [ "$is_enabled" == true ]; then
+        echo "  [1] 禁用自启动"
+    else
+        echo "  [1] 启用自启动"
+    fi
+    echo "  [0] 返回"
+    echo ""
+    
+    read -p "$(colorize "请选择 [0-1]: " "$COLOR_CYAN")" choice
+    
+    case $choice in
+        1)
+            if [ "$is_enabled" == true ]; then
+                disable_autostart
+            else
+                enable_autostart
+            fi
+            ;;
+        0) return ;;
+    esac
+    
+    read -p "按任意键继续..." -n 1
+}
+
+# 启用自启动
+enable_autostart() {
+    local bashrc="$HOME/.bashrc"
+    local autostart_marker="# Nexus Auto-Start"
+    local autostart_code="$autostart_marker
+if [ -f \"$PREFIX/bin/nexus\" ]; then
+    nexus
+fi"
+    
+    # 检查是否已存在
+    if grep -q "$autostart_marker" "$bashrc" 2>/dev/null; then
+        show_warning "自启动已启用"
+        return
+    fi
+    
+    # 添加自启动代码
+    echo "" >> "$bashrc"
+    echo "$autostart_code" >> "$bashrc"
+    
+    show_success "自启动已启用"
+    show_info "下次打开 Termux 将自动启动 Nexus"
+}
+
+# 禁用自启动
+disable_autostart() {
+    local bashrc="$HOME/.bashrc"
+    local autostart_marker="# Nexus Auto-Start"
+    
+    # 检查是否存在
+    if ! grep -q "$autostart_marker" "$bashrc" 2>/dev/null; then
+        show_warning "自启动未启用"
+        return
+    fi
+    
+    # 删除自启动代码（删除标记行及其后3行）
+    sed -i "/$autostart_marker/,+3d" "$bashrc"
+    
+    show_success "自启动用"
+    show_info "下次打开 Termux 需要手动输入 'nexus' 启动"
+}
+
 
 # ============================================
 # 故障排查
