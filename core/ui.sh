@@ -1,63 +1,83 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# UI 模块 - 界面显示与颜色
+# UI 显示模块
 
 # 颜色定义
-COLOR_RESET="\033[0m"
-COLOR_RED="\033[31m"
-COLOR_GREEN="\033[32m"
-COLOR_YELLOW="\033[33m"
-COLOR_BLUE="\033[34m"
-COLOR_MAGENTA="\033[35m"
-COLOR_CYAN="\033[36m"
-COLOR_BOLD="\033[1m"
+COLOR_RESET='\033[0m'
+COLOR_BOLD='\033[1m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[1;33m'
+COLOR_BLUE='\033[0;34m'
+COLOR_CYAN='\033[0;36m'
+COLOR_GRAY='\033[0;90m'
 
-# 颜色输出函数
+# 颜色输出
 colorize() {
-    echo -e "${2}${1}${COLOR_RESET}"
+    local text="$1"
+    local color="$2"
+    echo -e "${color}${text}${COLOR_RESET}"
 }
+
+# 显示消息
+show_info() { echo -e "${COLOR_BLUE}[信息]${COLOR_RESET} $1"; }
+show_success() { echo -e "${COLOR_GREEN}[成功]${COLOR_RESET} $1"; }
+show_error() { echo -e "${COLOR_RED}[错误]${COLOR_RESET} $1"; }
+show_warning() { echo -e "${COLOR_YELLOW}[警告]${COLOR_RESET} $1"; }
 
 # 显示头部
 show_header() {
     colorize "╔════════════════════════════════════════╗" "$COLOR_CYAN"
-    colorize "║     Nexus - SillyTavern-Termux 终端     ║" "$COLOR_CYAN"
+    colorize "║      🌟 Nexus - SillyTavern 一键部署 🌟    ║" "$COLOR_CYAN"
     colorize "╚════════════════════════════════════════╝" "$COLOR_CYAN"
+}
+
+# 全局变量存储版本信息（避免重复查询）
+ST_REMOTE_VERSION=""
+NEXUS_REMOTE_VERSION=""
+
+# 预加载版本信息（仅在启动时调用一次）
+preload_version_info() {
+    ST_REMOTE_VERSION=$(get_st_remote_version)
+    NEXUS_REMOTE_VERSION=$(get_nexus_remote_version)
 }
 
 # 显示版本信息
 show_version_info() {
-    local st_status=$(get_st_status)
-    local st_local=$(get_st_local_version)
-    local st_remote=$(get_st_remote_version)
-    local nexus_remote=$(get_nexus_remote_version)
-    
     echo ""
     colorize "📊 版本信息" "$COLOR_BOLD"
     echo "───────────────────────────────────────"
     
     # SillyTavern 状态
-    echo -n "  SillyTavern: "
+    local st_status=$(get_st_status)
     if [ "$st_status" == "running" ]; then
+        echo -n "  SillyTavern: "
         colorize "[运行中]" "$COLOR_GREEN"
     else
-        colorize "[已停止]" "$COLOR_YELLOW"
+        echo -n "  SillyTavern: "
+        colorize "[已停止]" "$COLOR_GRAY"
     fi
     
     # SillyTavern 版本
-    echo -n "  本地版本: $st_local  "
-    if [ "$st_local" != "$st_remote" ] && [ -n "$st_remote" ]; then
-        colorize "→ 可更新: $st_remote" "$COLOR_YELLOW"
-    else
-        colorize "✓ 最新" "$COLOR_GREEN"
+    local st_local=$(get_st_local_version)
+    echo "  本地版本: $st_local"
+    
+    if [ -n "$ST_REMOTE_VERSION" ]; then
+        echo "  最新版本: $ST_REMOTE_VERSION"
     fi
     
     echo ""
     
     # Nexus 版本
-    echo -n "  Nexus: v$NEXUS_VERSION  "
-    if [ "$NEXUS_VERSION" != "$nexus_remote" ] && [ -n "$nexus_remote" ]; then
-        colorize "→ 可更新: v$nexus_remote" "$COLOR_YELLOW"
+    echo -n "  Nexus: v$NEXUS_VERSION"
+    
+    if [ -n "$NEXUS_REMOTE_VERSION" ]; then
+        if [ "$NEXUS_VERSION" == "$NEXUS_REMOTE_VERSION" ]; then
+            colorize "  ✓ 最新" "$COLOR_GREEN"
+        else
+            colorize "  ⚠ 有更新 (v$NEXUS_REMOTE_VERSION)" "$COLOR_YELLOW"
+        fi
     else
-        colorize "✓ 最新" "$COLOR_GREEN"
+        echo ""
     fi
 }
 
@@ -72,22 +92,13 @@ show_menu_options() {
     echo "  [0] 退出"
 }
 
-# 成功提示
-show_success() {
-    colorize "✓ $1" "$COLOR_GREEN"
-}
-
-# 错误提示
-show_error() {
-    colorize "✗ $1" "$COLOR_RED"
-}
-
-# 警告提示
-show_warning() {
-    colorize "⚠ $1" "$COLOR_YELLOW"
-}
-
-# 信息提示
-show_info() {
-    colorize "ℹ $1" "$COLOR_BLUE"
+# 显示加载动画
+show_loading() {
+    local message="$1"
+    echo -n "$message"
+    for i in {1..3}; do
+        echo -n "."
+        sleep 0.3
+    done
+    echo ""
 }
