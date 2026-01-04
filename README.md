@@ -1,4 +1,4 @@
-```markdown
+
 # Nexus - SillyTavern 一键部署与管理工具
 
 **专为 Termux 打造的轻量级、模块化 SillyTavern 管理框架**
@@ -74,7 +74,7 @@ Nexus/
 ## 🤝 致谢 (Acknowledgments)
 
 - **[SillyTavern](https://github.com/SillyTavern/SillyTavern)**: 感谢官方团队。
-- **[随行终端]([此处填写你的链接](https://discord.com/channels/1291925535324110879/1385183883540303872))**: 感谢随行终端提供的灵感。
+- **[随行终端](https://discord.com/channels/1291925535324110879/1385183883540303872)**: 感谢随行终端提供的灵感。
 
 ---
 
@@ -90,4 +90,3 @@ Nexus/
 > ⚠️ **警告**：任何违反上述协议的行为（包括但不限于修改代码后二次打包发布、去除版权信息等）均将被视为侵权。
 
 Copyright © 2024 Tangchuzhi. All Rights Reserved.
-```
