@@ -87,7 +87,6 @@ show_menu_options() {
     echo "  [2] SillyTavern 启动"
     echo "  [3] Nexus 更新/重装"
     echo "  [4] Nexus 系统设置"
-    echo ""
     echo "  [0] 退出"
 }
 
