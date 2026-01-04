@@ -34,72 +34,74 @@ show_header() {
     echo -e "${COLOR_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}"
 }
 
-# 显示版本信息（每次调用时动态获取，利用缓存机制）
+# 显示分隔线
+show_separator() {
+    echo ""
+    echo -e "${COLOR_GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}"
+    echo ""
+}
+
+# 显示版本信息
 show_version_info() {
     echo ""
-    colorize "📊 版本信息" "$COLOR_BOLD"
-    echo "───────────────────────────────────────"
-    
-    # SillyTavern 状态
-    local st_status=$(get_st_status)
-    if [ "$st_status" == "running" ]; then
-        echo -n "  SillyTavern: "
-        colorize "[运行中]" "$COLOR_GREEN"
-    else
-        echo -n "  SillyTavern: "
-        colorize "[已停止]" "$COLOR_GRAY"
-    fi
+    colorize "📦 版本信息" "$COLOR_BOLD"
+    echo ""
     
     # SillyTavern 版本
     local st_local=$(get_st_local_version)
-    echo "  本地版本: $st_local"
-    
-    # 获取远程版本（会自动使用缓存或刷新）
     local st_remote=$(get_st_remote_version)
-    if [ -n "$st_remote" ]; then
-        echo "  最新版本: $st_remote"
+    
+    echo -n "  SillyTavern: "
+    if [ "$st_local" == "未安装" ]; then
+        colorize "$st_local" "$COLOR_GRAY"
+    else
+        echo -n "$st_local"
+        if [ -n "$st_remote" ] && [ "$st_local" != "$st_remote" ]; then
+            colorize " → $st_remote" "$COLOR_YELLOW"
+        else
+            colorize " ✓" "$COLOR_GREEN"
+        fi
     fi
     
-    echo ""
-    
     # Nexus 版本
+    local nexus_remote=$(get_nexus_remote_version)
     echo -n "  Nexus: v$NEXUS_VERSION"
     
-    # 获取远程版本（会自动使用缓存或刷新）
-    local nexus_remote=$(get_nexus_remote_version)
     if [ -n "$nexus_remote" ]; then
         if [ "$NEXUS_VERSION" == "$nexus_remote" ]; then
-            colorize "  ✓ 最新" "$COLOR_GREEN"
+            colorize " ✓" "$COLOR_GREEN"
         else
-            colorize "  ⚠ 有更新 (v$nexus_remote)" "$COLOR_YELLOW"
+            colorize " → v$nexus_remote" "$COLOR_YELLOW"
         fi
     else
         echo ""
     fi
-    
-    # 显示缓存状态（调试用，可选）
-    # local cache_time=$(get_cache_remaining_time "$CACHE_DIR/nexus_version")
-    # echo -e "${COLOR_GRAY}  (缓存: $cache_time)${COLOR_RESET}"
 }
 
 # 显示菜单选项
 show_menu_options() {
+    echo ""
     colorize "📋 功能菜单" "$COLOR_BOLD"
-    echo "───────────────────────────────────────"
+    echo ""
     echo "  [1] SillyTavern 安装/更新"
     echo "  [2] SillyTavern 启动"
     echo "  [3] Nexus 更新/重装"
     echo "  [4] Nexus 系统设置"
+    echo ""
     echo "  [0] 退出"
 }
 
-# 显示加载动画
+# 显示子菜单头部（统一风格）
+show_submenu_header() {
+    local title="$1"
+    echo ""
+    colorize "🔹 $title" "$COLOR_CYAN"
+    echo ""
+}
+
+# 显示加载动画（优化版，减少sleep调用）
 show_loading() {
     local message="$1"
     echo -n "$message"
-    for i in {1..3}; do
-        echo -n "."
-        sleep 0.3
-    done
-    echo ""
+    echo " ..."
 }
