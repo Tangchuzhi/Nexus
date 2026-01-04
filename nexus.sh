@@ -2,7 +2,9 @@
 # Nexus - SillyTavern-Termux 管理终端
 
 NEXUS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NEXUS_VERSION="1.0.0"
+
+# 从 VERSION 文件读取版本号
+NEXUS_VERSION=$(cat "$NEXUS_DIR/VERSION" 2>/dev/null || echo "未知版本")
 
 # 加载核心模块
 source "$NEXUS_DIR/core/ui.sh"
