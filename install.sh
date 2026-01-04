@@ -1,12 +1,10 @@
 #!/data/data/com.termux/files/usr/bin/bash
+# Nexus - SillyTavern-Termux 安装程序
 
 set -e
 
 NEXUS_DIR="$HOME/nexus"
 REPO_URL="https://github.com/Tangchuzhi/Nexus.git"
-
-echo "🚀 Nexus 安装程序"
-echo "=================="
 
 # 检查并安装依赖
 echo "📦 检查依赖..."
