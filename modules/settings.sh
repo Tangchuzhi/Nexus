@@ -376,7 +376,7 @@ uninstall_menu() {
     echo "───────────────────────────────────────"
     echo ""
     echo "  [1] 卸载 SillyTavern"
-    echo "  [2] 卸载 Nexus（完全清理）"
+    echo "  [2] 卸载 Nexus"
     echo "  [0] 返回"
     echo ""
     
@@ -452,7 +452,7 @@ uninstall_nexus() {
     rm -rf "$NEXUS_DIR"
     
     show_success "Nexus 已完全卸载"
-    show_info "感谢使用 Nexus，再见！"
+    show_info "感谢使用 Nexus，晚安！"
     exit 0
 }
 
