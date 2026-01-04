@@ -86,10 +86,10 @@ show_version_info() {
 show_menu_options() {
     colorize "📋 功能菜单" "$COLOR_BOLD"
     echo "───────────────────────────────────────"
-    echo "  [1] SillyTavern 安装 & 更新"
+    echo "  [1] SillyTavern 安装/更新"
     echo "  [2] SillyTavern 启动"
     echo "  [3] Nexus 更新/重装"
-    echo "  [4] 系统设置"
+    echo "  [4] Nexus 系统设置"
     echo "  [0] 退出"
 }
 
