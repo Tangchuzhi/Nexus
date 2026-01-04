@@ -16,15 +16,6 @@ print_success() { echo -e "${GREEN}[成功]${NC} $1"; }
 print_error() { echo -e "${RED}[错误]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[警告]${NC} $1"; }
 
-# 显示欢迎信息
-show_welcome() {
-    clear
-    echo "╔════════════════════════════════════════╗"
-    echo "║       🌟 Nexus 安装程序 🌟            ║"
-    echo "╚════════════════════════════════════════╝"
-    echo ""
-}
-
 # 检查依赖
 check_dependencies() {
     print_info "检查依赖..."
@@ -115,9 +106,7 @@ fi"
 # 完成安装
 finish_install() {
     echo ""
-    echo "╔════════════════════════════════════════╗"
-    echo "║         ✅ 安装完成！                  ║"
-    echo "╚════════════════════════════════════════╝"
+    echo "✅ 安装完成！"
     echo ""
     print_success "Nexus 已成功安装到: $HOME/nexus"
     echo ""
