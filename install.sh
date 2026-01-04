@@ -16,6 +16,18 @@ print_success() { echo -e "${GREEN}[成功]${NC} $1"; }
 print_error() { echo -e "${RED}[错误]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[警告]${NC} $1"; }
 
+# 显示欢迎信息
+show_welcome() {
+    clear
+    echo ""
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "  ${CYAN}🌟 Nexus 安装程序 🌟${NC}"
+    echo ""
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+}
+
 # 检查依赖
 check_dependencies() {
     print_info "检查依赖..."
