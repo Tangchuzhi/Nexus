@@ -1,6 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # Nexus - SillyTavern-Termux 管理终端
-# Version: 1.0.0
 
 NEXUS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NEXUS_VERSION="1.0.0"
