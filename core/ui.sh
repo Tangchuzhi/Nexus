@@ -26,22 +26,15 @@ show_warning() { echo -e "${COLOR_YELLOW}[警告]${COLOR_RESET} $1"; }
 
 # 显示头部
 show_header() {
-    colorize "╔════════════════════════════════════════╗" "$COLOR_CYAN"
-    colorize "║      🌟 Nexus - SillyTavern 一键部署 🌟    ║" "$COLOR_CYAN"
-    colorize "╚════════════════════════════════════════╝" "$COLOR_CYAN"
+    echo ""
+    echo -e "${COLOR_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}"
+    echo ""
+    echo -e "  ${COLOR_BOLD}${COLOR_CYAN}Nexus${COLOR_RESET} ${COLOR_GRAY}·${COLOR_RESET} SillyTavern 管理终端"
+    echo ""
+    echo -e "${COLOR_CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}"
 }
 
-# 全局变量存储版本信息（避免重复查询）
-ST_REMOTE_VERSION=""
-NEXUS_REMOTE_VERSION=""
-
-# 预加载版本信息（仅在启动时调用一次）
-preload_version_info() {
-    ST_REMOTE_VERSION=$(get_st_remote_version)
-    NEXUS_REMOTE_VERSION=$(get_nexus_remote_version)
-}
-
-# 显示版本信息
+# 显示版本信息（每次调用时动态获取，利用缓存机制）
 show_version_info() {
     echo ""
     colorize "📊 版本信息" "$COLOR_BOLD"
@@ -61,8 +54,10 @@ show_version_info() {
     local st_local=$(get_st_local_version)
     echo "  本地版本: $st_local"
     
-    if [ -n "$ST_REMOTE_VERSION" ]; then
-        echo "  最新版本: $ST_REMOTE_VERSION"
+    # 获取远程版本（会自动使用缓存或刷新）
+    local st_remote=$(get_st_remote_version)
+    if [ -n "$st_remote" ]; then
+        echo "  最新版本: $st_remote"
     fi
     
     echo ""
@@ -70,25 +65,31 @@ show_version_info() {
     # Nexus 版本
     echo -n "  Nexus: v$NEXUS_VERSION"
     
-    if [ -n "$NEXUS_REMOTE_VERSION" ]; then
-        if [ "$NEXUS_VERSION" == "$NEXUS_REMOTE_VERSION" ]; then
+    # 获取远程版本（会自动使用缓存或刷新）
+    local nexus_remote=$(get_nexus_remote_version)
+    if [ -n "$nexus_remote" ]; then
+        if [ "$NEXUS_VERSION" == "$nexus_remote" ]; then
             colorize "  ✓ 最新" "$COLOR_GREEN"
         else
-            colorize "  ⚠ 有更新 (v$NEXUS_REMOTE_VERSION)" "$COLOR_YELLOW"
+            colorize "  ⚠ 有更新 (v$nexus_remote)" "$COLOR_YELLOW"
         fi
     else
         echo ""
     fi
+    
+    # 显示缓存状态（调试用，可选）
+    # local cache_time=$(get_cache_remaining_time "$CACHE_DIR/nexus_version")
+    # echo -e "${COLOR_GRAY}  (缓存: $cache_time)${COLOR_RESET}"
 }
 
 # 显示菜单选项
 show_menu_options() {
     colorize "📋 功能菜单" "$COLOR_BOLD"
     echo "───────────────────────────────────────"
-    echo "  [1] SillyTavern 安装/更新"
+    echo "  [1] SillyTavern 安装 & 更新"
     echo "  [2] SillyTavern 启动"
     echo "  [3] Nexus 更新/重装"
-    echo "  [4] Nexus 系统设置"
+    echo "  [4] 系统设置"
     echo "  [0] 退出"
 }
 
