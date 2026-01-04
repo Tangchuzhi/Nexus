@@ -49,13 +49,12 @@ main_menu() {
 nexus_update() {
     clear
     show_header
-    colorize "🔄 Nexus 更新" "$COLOR_CYAN"
-    echo "───────────────────────────────────────"
-    echo ""
+    show_submenu_header "Nexus 更新"
+    
     echo "  当前版本: v$NEXUS_VERSION"
     
     # 强制刷新远程版本
-    show_info "正在检查更新..."
+    show_loading "正在检查更新"
     rm -f "$NEXUS_DIR/.cache/nexus_version"
     local remote_version=$(get_nexus_remote_version)
     
@@ -84,6 +83,7 @@ nexus_update() {
         0) return ;;
     esac
 }
+
 
 # 执行更新
 nexus_do_update() {
