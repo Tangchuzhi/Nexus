@@ -1,22 +1,32 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Nexus - SillyTavern-Termux 一键安装脚本
+# Nexus 安装脚本
 
 set -e
 
+# ============================================
 # 颜色定义
+# ============================================
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
+# ============================================
 # 打印函数
+# ============================================
+
 print_info() { echo -e "${BLUE}[信息]${NC} $1"; }
 print_success() { echo -e "${GREEN}[成功]${NC} $1"; }
 print_error() { echo -e "${RED}[错误]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[警告]${NC} $1"; }
 
+# ============================================
 # 显示欢迎信息
+# ============================================
+
 show_welcome() {
     clear
     echo ""
@@ -28,7 +38,10 @@ show_welcome() {
     echo ""
 }
 
+# ============================================
 # 检查依赖
+# ============================================
+
 check_dependencies() {
     print_info "检查依赖..."
     
@@ -43,7 +56,11 @@ check_dependencies() {
         print_warning "缺少依赖: ${missing_deps[*]}"
         print_info "正在安装依赖..."
         
-        pkg update -y
+        pkg update -y || {
+            print_error "更新软件源失败"
+            exit 1
+        }
+        
         pkg install -y git nodejs jq curl || {
             print_error "依赖安装失败"
             exit 1
@@ -55,7 +72,10 @@ check_dependencies() {
     fi
 }
 
+# ============================================
 # 安装 Nexus
+# ============================================
+
 install_nexus() {
     print_info "开始安装 Nexus..."
     
@@ -74,10 +94,10 @@ install_nexus() {
     
     # 克隆仓库
     print_info "正在下载 Nexus..."
-    git clone https://github.com/Tangchuzhi/Nexus.git "$install_dir" || {
+    if ! git clone https://github.com/Tangchuzhi/Nexus.git "$install_dir" 2>&1 | grep -v "^Cloning"; then
         print_error "下载失败，请检查网络"
         exit 1
-    }
+    fi
     
     # 设置权限
     chmod +x "$install_dir/nexus.sh"
@@ -88,14 +108,17 @@ install_nexus() {
     print_success "Nexus 安装完成"
 }
 
+# ============================================
 # 配置自启动
+# ============================================
+
 setup_autostart() {
     print_info "配置自启动..."
     
     local bashrc="$HOME/.bashrc"
     local autostart_marker="# Nexus Auto-Start"
     local autostart_code="$autostart_marker
-if [ -f \"$PREFIX/bin/nexus\" ]; then
+if [ -f \"\$PREFIX/bin/nexus\" ]; then
     nexus
 fi"
     
@@ -115,10 +138,17 @@ fi"
     echo ""
 }
 
+# ============================================
 # 完成安装
+# ============================================
+
 finish_install() {
     echo ""
-    echo "✅ 安装完成！"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "  ${GREEN}✅ 安装完成！${NC}"
+    echo ""
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     print_success "Nexus 已成功安装到: $HOME/nexus"
     echo ""
@@ -133,7 +163,10 @@ finish_install() {
     fi
 }
 
+# ============================================
 # 主流程
+# ============================================
+
 main() {
     show_welcome
     check_dependencies
@@ -142,5 +175,5 @@ main() {
     finish_install
 }
 
+# 执行主流程
 main
-
