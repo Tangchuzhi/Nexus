@@ -14,7 +14,7 @@ init_nexus() {
     check_dependencies
 }
 
-# 检查依赖
+# 检查依赖（简单版，仅用于初始化）
 check_dependencies() {
     local missing_deps=()
     
@@ -26,11 +26,103 @@ check_dependencies() {
     
     if [ ${#missing_deps[@]} -gt 0 ]; then
         show_error "缺少依赖: ${missing_deps[*]}"
-        show_info "正在安装依赖..."
+        show_info "正在自动安装依赖..."
+        
+        pkg update -y || show_error "pkg update 失败"
         pkg install -y git nodejs jq curl || {
-            show_error "依赖安装失败，请手动执行: pkg install git nodejs jq curl"
+            show_error "依赖安装失败"
+            show_warning "请手动执行: pkg install git nodejs jq curl"
             exit 1
         }
+        
+        show_success "依赖安装完成"
+    fi
+}
+
+# 详细检查依赖（供故障排查使用）
+check_dependencies_detailed() {
+    colorize "📦 依赖检查" "$COLOR_CYAN"
+    
+    local all_ok=true
+    
+    # Git
+    if command -v git &> /dev/null; then
+        show_success "✓ Git: $(git --version | cut -d' ' -f3)"
+    else
+        show_error "✗ Git: 未安装"
+        show_warning "  原因: 缺少 Git 工具，无法克隆仓库"
+        show_info "  解决: 选择 [3] 重新安装依赖"
+        all_ok=false
+    fi
+    
+    # Node.js
+    if command -v node &> /dev/null; then
+        show_success "✓ Node.js: $(node --version)"
+    else
+        show_error "✗ Node.js: 未安装"
+        show_warning "  原因: 缺少 Node.js 运行环境"
+        show_info "  解决: 选择 [3] 重新安装依赖"
+        all_ok=false
+    fi
+    
+    # npm
+    if command -v npm &> /dev/null; then
+        show_success "✓ npm: $(npm --version)"
+    else
+        show_error "✗ npm: 未安装"
+        show_warning "  原因: 缺少 npm 包管理器"
+        show_info "  解决: 选择 [3] 重新安装依赖"
+        all_ok=false
+    fi
+    
+    # jq
+    if command -v jq &> /dev/null; then
+        show_success "✓ jq: $(jq --version | cut -d'-' -f2)"
+    else
+        show_error "✗ jq: 未安装"
+        show_warning "  原因: 缺少 JSON 解析工具"
+        show_info "  解决: 选择 [3] 重新安装依赖"
+        all_ok=false
+    fi
+    
+    # curl
+    if command -v curl &> /dev/null; then
+        show_success "✓ curl: $(curl --version | head -1 | cut -d' ' -f2)"
+    else
+        show_error "✗ curl: 未安装"
+        show_warning "  原因: 缺少网络请求工具"
+        show_info "  解决: 选择 [3] 重新安装依赖"
+        all_ok=false
+    fi
+    
+    if [ "$all_ok" == false ]; then
+        echo ""
+        show_error "发现缺失依赖，请重新安装"
+    fi
+}
+
+# 重新安装依赖
+reinstall_dependencies() {
+    show_info "开始重新安装依赖..."
+    
+    pkg update -y
+    pkg install -y git nodejs jq curl
+    
+    show_success "依赖安装完成"
+    show_info "请重新运行故障排查"
+}
+
+# 设置存储权限
+setup_storage() {
+    show_info "正在请求存储权限..."
+    termux-setup-storage
+    sleep 2
+    
+    if [ -d "/sdcard" ] && [ -r "/sdcard" ]; then
+        show_success "存储权限设置成功"
+    else
+        show_error "存储权限设置失败"
+        show_warning "请在手机设置中手动授予 Termux 存储权限"
     fi
 }
 
@@ -50,36 +142,12 @@ confirm_action() {
     [[ "$answer" =~ ^[Yy]$ ]]
 }
 
-# 创建目录（安全）
+# 安全创建目录
 safe_mkdir() {
     mkdir -p "$1" 2>/dev/null || {
         show_error "无法创建目录: $1"
         return 1
     }
-}
-
-# 获取文件大小
-get_readable_size() {
-    local size=$1
-    if [ $size -lt 1024 ]; then
-        echo "${size}B"
-    elif [ $size -lt 1048576 ]; then
-        echo "$((size / 1024))KB"
-    else
-        echo "$((size / 1048576))MB"
-    fi
-}
-
-# 检查磁盘空间（MB）
-check_disk_space() {
-    local required_mb=$1
-    local available_mb=$(df "$HOME" | awk 'NR==2 {print int($4/1024)}')
-    
-    if [ $available_mb -lt $required_mb ]; then
-        show_error "磁盘空间不足，需要 ${required_mb}MB，可用 ${available_mb}MB"
-        return 1
-    fi
-    return 0
 }
 
 # 安全删除目录
