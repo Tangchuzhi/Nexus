@@ -109,7 +109,6 @@ st_reinstall() {
     
     # 询问是否备份
     if confirm_action "是否先备份配置？"; then
-        # 调用备份功能（需要在 settings.sh 中实现）
         create_backup
         echo ""
     fi
@@ -121,10 +120,15 @@ st_reinstall() {
     st_install
 }
 
-# 启动 SillyTavern
+# 启动 SillyTavern（简化版）
 st_start() {
+    clear
+    show_header
+    
+    # 检查是否已安装
     if [ ! -d "$SILLYTAVERN_DIR" ]; then
         show_error "SillyTavern 未安装"
+        echo ""
         show_info "请先选择 [1] 安装 SillyTavern"
         return 1
     fi
@@ -133,66 +137,22 @@ st_start() {
     if [ "$(get_st_status)" == "running" ]; then
         show_warning "SillyTavern 已在运行"
         echo ""
-        echo "  [1] 重启 SillyTavern"
-        echo "  [2] 停止 SillyTavern"
-        echo "  [0] 返回"
-        echo ""
-        
-        read -p "$(colorize "请选择 [0-2]: " "$COLOR_CYAN")" choice
-        
-        case $choice in
-            1) st_stop; sleep 1; st_do_start ;;
-            2) st_stop ;;
-            0) return ;;
-        esac
-        return
+        show_success "访问地址: http://127.0.0.1:8000"
+        return 0
     fi
     
-    st_do_start
-}
-
-# 执行启动
-st_do_start() {
+    # 启动服务
     show_info "正在启动 SillyTavern..."
-    cd "$SILLYTAVERN_DIR" || return 1
-    
-    # 检查是否安装了 termux
-    if command -v tmux &> /dev/null; then
-        # 使用 termux 启动
-        tmux new-session -d -s sillytavern "node server.js"
-        show_success "SillyTavern 已在 tmux 会话中启动"
-        echo ""
-        show_info "管理命令："
-        echo "  查看日志: tmux attach -t sillytavern"
-        echo "  退出查看: 按 Ctrl+B 然后按 D"
-        echo "  停止服务: 在 Nexus 中选择停止"
-    else
-        # 后台启动
-        nohup node server.js > "$HOME/.nexus/st.log" 2>&1 &
-        show_success "SillyTavern 已在后台启动"
-        echo ""
-        show_info "查看日志: cat ~/.nexus/st.log"
-    fi
-    
     echo ""
-    show_success "访问地址: http://127.0.0.1:8000"
-}
-
-# 停止 SillyTavern
-st_stop() {
-    show_info "正在停止 SillyTavern..."
     
-    # 停止进程
-    pkill -f "node.*server.js"
+    cd "$SILLYTAVERN_DIR" || {
+        show_error "无法进入目录"
+        return 1
+    }
     
-    # 停止 tmux 会话
-    tmux kill-session -t sillytavern 2>/dev/null
+    # 直接在前台运行（用户关闭 Termux 即停止）
+    node server.js
     
-    sleep 1
-    
-    if [ "$(get_st_status)" == "stopped" ]; then
-      show_success "SillyTavern 已停止"
-    else
-        show_warning "停止失败，可能需要手动终止进程"
-    fi
+    # 如果执行到这里，说明服务已停止
+    show_info "SillyTavern 已停止"
 }
