@@ -1,10 +1,21 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # Nexus - SillyTavern-Termux 管理终端
 
-NEXUS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -L "${BASH_SOURCE[0]}" ]; then
+    NEXUS_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+else
+    NEXUS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 
 # 从 VERSION 文件读取版本号
 NEXUS_VERSION=$(cat "$NEXUS_DIR/VERSION" 2>/dev/null | tr -d '[:space:]' || echo "未知版本")
+
+# 检查核心文件是否存在
+if [ ! -f "$NEXUS_DIR/core/ui.sh" ]; then
+    echo "错误: 找不到核心文件，请检查安装"
+    echo "NEXUS_DIR: $NEXUS_DIR"
+    exit 1
+fi
 
 # 加载核心模块
 source "$NEXUS_DIR/core/ui.sh"
@@ -28,7 +39,7 @@ main_menu() {
         show_menu_options
         echo ""
         
-        read -p "$(colorize "请选择操作 [1-4]: " "$COLOR_CYAN")" choice
+        read -p "$(colorize "请选择操作 [0-4]: " "$COLOR_CYAN")" choice
         
         case $choice in
             1) st_install_update ;;
@@ -75,21 +86,14 @@ nexus_update() {
 # 执行更新
 nexus_do_update() {
     show_info "开始更新 Nexus..."
-    
     cd "$NEXUS_DIR"
-    
-    # 拉取最新代码
     git pull origin main || {
         show_error "更新失败，请检查网络"
         return 1
     }
-    
-    # 重新加载
     chmod +x nexus.sh
-    
     show_success "Nexus 更新完成！"
     show_info "请重新启动 Nexus 以应用更新"
-    
     if confirm_action "是否立即重启？"; then
         exec "$NEXUS_DIR/nexus.sh"
     fi
@@ -98,28 +102,18 @@ nexus_do_update() {
 # 重新安装
 nexus_reinstall() {
     show_warning "这将重新下载 Nexus，当前配置将保留"
-    
     if ! confirm_action "确认重新安装？"; then
         return
     fi
-    
-    # 备份配置
     local backup_conf="/tmp/nexus.conf.bak"
     [ -f "$NEXUS_DIR/config/nexus.conf" ] && cp "$NEXUS_DIR/config/nexus.conf" "$backup_conf"
-    
     cd "$HOME"
     rm -rf "$NEXUS_DIR"
-    
     git clone https://github.com/Tangchuzhi/Nexus.git "$NEXUS_DIR"
-    
-    # 恢复配置
     [ -f "$backup_conf" ] && cp "$backup_conf" "$NEXUS_DIR/config/nexus.conf"
-    
     chmod +x "$NEXUS_DIR/nexus.sh"
     ln -sf "$NEXUS_DIR/nexus.sh" "$PREFIX/bin/nexus"
-    
     show_success "Nexus 重新安装完成！"
-    
     if confirm_action "是否立即重启？"; then
         exec "$NEXUS_DIR/nexus.sh"
     fi
