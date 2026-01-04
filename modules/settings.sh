@@ -15,7 +15,6 @@ settings_menu() {
         echo "  [2] 卸载管理"
         echo "  [3] 自启动管理"
         echo "  [4] 故障排查"
-        echo ""
         echo "  [0] 返回主菜单"
         echo ""
         
