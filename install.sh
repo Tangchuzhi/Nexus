@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Nexus 安装脚本
+# Nexus 安装脚本 - 优化版
 
 set -e
 
@@ -39,37 +39,117 @@ show_welcome() {
 }
 
 # ============================================
-# 检查依赖
+# 网络检测
+# ============================================
+
+check_network() {
+    print_info "检测网络连接..."
+    
+    if ! ping -c 1 -W 3 223.5.5.5 &> /dev/null && \
+       ! ping -c 1 -W 3 8.8.8.8 &> /dev/null; then
+        print_error "网络连接失败，请检查网络设置"
+        exit 1
+    fi
+    
+    print_success "网络连接正常"
+}
+
+# ============================================
+# 配置镜像源
+# ============================================
+
+setup_mirrors() {
+    print_info "配置 Termux 镜像源..."
+    
+    # 检测地区（简单判断）
+    local use_cn_mirror=false
+    if ping -c 1 -W 2 mirrors.tuna.tsinghua.edu.cn &> /dev/null; then
+        use_cn_mirror=true
+    fi
+    
+    # 备份原配置
+    [ -f "$PREFIX/etc/apt/sources.list" ] && \
+        cp "$PREFIX/etc/apt/sources.list" "$PREFIX/etc/apt/sources.list.bak"
+    
+    if [ "$use_cn_mirror" = true ]; then
+        print_info "使用国内镜像源（清华大学）"
+        cat > "$PREFIX/etc/apt/sources.list" <<EOF
+# 清华大学镜像源
+deb https://mirrors.tuna.tsinghua.edu.cn/termux/apt/termux-main stable main
+EOF
+    else
+        print_info "使用官方镜像源"
+        cat > "$PREFIX/etc/apt/sources.list" <<EOF
+# Termux 官方源
+deb https://packages-cf.termux.dev/apt/termux-main stable main
+EOF
+    fi
+    
+    print_success "镜像源配置完成"
+}
+
+# ============================================
+# 检查并安装依赖
 # ============================================
 
 check_dependencies() {
     print_info "检查依赖..."
     
     local missing_deps=()
-    for cmd in git node npm jq curl; do
-        if ! command -v "$cmd" &> /dev/null; then
-            missing_deps+=("$cmd")
-        fi
-    done
+    
+    # 检查命令是否存在
+    command -v git &> /dev/null || missing_deps+=("git")
+    command -v node &> /dev/null || missing_deps+=("nodejs")
+    command -v jq &> /dev/null || missing_deps+=("jq")
+    command -v curl &> /dev/null || missing_deps+=("curl")
     
     if [ ${#missing_deps[@]} -gt 0 ]; then
         print_warning "缺少依赖: ${missing_deps[*]}"
-        print_info "正在安装依赖..."
-        
-        pkg update -y || {
-            print_error "更新软件源失败"
-            exit 1
-        }
-        
-        pkg install -y git nodejs jq curl || {
-            print_error "依赖安装失败"
-            exit 1
-        }
-        
-        print_success "依赖安装完成"
+        install_dependencies
     else
         print_success "所有依赖已满足"
     fi
+}
+
+install_dependencies() {
+    print_info "正在安装依赖..."
+    
+    # 更新软件源
+    print_info "更新软件源（可能需要 1-2 分钟）..."
+    if ! pkg update -y 2>&1 | grep -E "(Reading|Get:|Fetched)" | tail -5; then
+        print_error "软件源更新失败"
+        
+        # 尝试恢复备份
+        if [ -f "$PREFIX/etc/apt/sources.list.bak" ]; then
+            print_info "尝试恢复原镜像源..."
+            mv "$PREFIX/etc/apt/sources.list.bak" "$PREFIX/etc/apt/sources.list"
+            pkg update -y || {
+                print_error "依然失败，请手动配置镜像源"
+                exit 1
+            }
+        else
+            exit 1
+        fi
+    fi
+    
+    # 安装依赖包
+    print_info "安装依赖包..."
+    if ! pkg install -y git nodejs jq curl 2>&1 | grep -E "(Unpacking|Setting up)" | tail -5; then
+        print_error "依赖安装失败"
+        exit 1
+    fi
+    
+    print_success "依赖安装完成"
+    
+    # 验证安装
+    print_info "验证安装..."
+    for cmd in git node jq curl; do
+        if ! command -v "$cmd" &> /dev/null; then
+            print_error "$cmd 安装失败"
+            exit 1
+        fi
+    done
+    print_success "所有依赖验证通过"
 }
 
 # ============================================
@@ -93,14 +173,28 @@ install_nexus() {
     fi
     
     # 克隆仓库
-    print_info "正在下载 Nexus..."
-    if ! git clone https://github.com/Tangchuzhi/Nexus.git "$install_dir" 2>&1 | grep -v "^Cloning"; then
-        print_error "下载失败，请检查网络"
-        exit 1
+    print_info "正在下载 Nexus（可能需要 1-2 分钟）..."
+    
+    if ! git clone --depth=1 --progress \
+        https://github.com/Tangchuzhi/Nexus.git "$install_dir" 2>&1 | \
+        grep -E "(Cloning|Receiving|Resolving)"; then
+        
+        print_error "下载失败"
+        
+        # 尝试使用镜像
+        print_info "尝试使用 GitHub 镜像..."
+        if ! git clone --depth=1 --progress \
+            https://ghproxy.com/https://github.com/Tangchuzhi/Nexus.git "$install_dir" 2>&1 | \
+            grep -E "(Cloning|Receiving|Resolving)"; then
+            
+            print_error "下载失败，请检查网络或稍后重试"
+            exit 1
+        fi
     fi
     
     # 设置权限
     chmod +x "$install_dir/nexus.sh"
+    chmod +x "$install_dir/install.sh"
     
     # 创建软链接
     ln -sf "$install_dir/nexus.sh" "$PREFIX/bin/nexus"
@@ -169,6 +263,8 @@ finish_install() {
 
 main() {
     show_welcome
+    check_network
+    setup_mirrors
     check_dependencies
     install_nexus
     setup_autostart
