@@ -30,10 +30,10 @@ main_menu() {
         read -p "$(colorize "请选择操作 [1-4]: " "$COLOR_CYAN")" choice
         
         case $choice in
-            1) st_install_update ;;
-            2) st_start ;;
-            3) nexus_update ;;
-            4) settings_menu ;;
+            1) Sillytavern-安装/更新 ;;
+            2) Sillytavern-启动 ;;
+            3) Nexus-系统更新 ;;
+            4) Nexus-系统设置 ;;
             0) exit 0 ;;
             *) show_error "无效选项" ;;
         esac
