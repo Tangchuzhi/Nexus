@@ -46,6 +46,7 @@ get_st_remote_version() {
 get_nexus_remote_version() {
     local cache_file="$CACHE_DIR/nexus_version"
     
+    # 检查缓存
     if [ -f "$cache_file" ]; then
         local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file")))
         if [ $cache_age -lt $CACHE_TIMEOUT ]; then
@@ -54,13 +55,16 @@ get_nexus_remote_version() {
         fi
     fi
     
+    # 异步获取远程版本（直接读取 VERSION 文件）
     (
-        local version=$(curl -s "https://api.github.com/repos/Tangchuzhi/Nexus/releases/latest" | jq -r '.tag_name' | sed 's/^v//')
+        local version=$(curl -s "https://raw.githubusercontent.com/Tangchuzhi/Nexus/main/VERSION" | tr -d '[:space:]')
         [ -n "$version" ] && echo "$version" > "$cache_file"
     ) &
     
+    # 返回缓存或空
     [ -f "$cache_file" ] && cat "$cache_file" || echo ""
 }
+
 
 # 强制刷新版本缓存
 refresh_version_cache() {
