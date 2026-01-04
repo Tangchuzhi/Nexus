@@ -581,6 +581,10 @@ troubleshoot_menu() {
     # 显示路径信息
     show_path_info
     echo ""
+
+    # 显示缓存状态
+    show_cache_status
+    echo ""
     
     echo "───────────────────────────────────────"
     echo ""
@@ -715,4 +719,17 @@ reinstall_dependencies() {
     
     show_success "依赖安装完成"
     show_info "请重新运行故障排查"
+}
+
+# 显示缓存状态
+show_cache_status() {
+    colorize "🕐 版本缓存状态" "$COLOR_CYAN"
+    
+    local st_cache_time=$(get_cache_remaining_time "$CACHE_DIR/st_version")
+    local nexus_cache_time=$(get_cache_remaining_time "$CACHE_DIR/nexus_version")
+    
+    echo "  SillyTavern: $st_cache_time"
+    echo "  Nexus: $nexus_cache_time"
+    echo ""
+    echo "  缓存有效期: 1小时"
 }
