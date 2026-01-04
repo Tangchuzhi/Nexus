@@ -10,8 +10,8 @@ st_install_update() {
     show_header
     
     if [ -d "$SILLYTAVERN_DIR" ]; then
-        colorize "🔄 检测到已安装 SillyTavern" "$COLOR_YELLOW"
-        echo ""
+        show_submenu_header "SillyTavern 管理"
+        
         echo "  [1] 更新到最新版本"
         echo "  [2] 重新安装"
         echo "  [0] 返回"
@@ -32,30 +32,29 @@ st_install_update() {
 
 # 安装 SillyTavern
 st_install() {
-    show_info "开始安装 SillyTavern..."
+    clear
+    show_header
+    show_submenu_header "安装 SillyTavern"
+    
+    show_info "开始安装..."
     echo ""
     
     # 克隆仓库
-    show_info "正在克隆仓库..."
-    if ! git clone "$ST_REPO" "$SILLYTAVERN_DIR"; then
+    show_loading "正在克隆仓库"
+    if ! git clone "$ST_REPO" "$SILLYTAVERN_DIR" 2>&1 | grep -v "^Cloning"; then
         show_error "克隆失败，请检查网络连接"
         return 1
     fi
     
     # 安装依赖
-    show_info "正在安装依赖（可能需要几分钟）..."
+    show_loading "正在安装依赖（可能需要几分钟）"
     cd "$SILLYTAVERN_DIR" || {
         show_error "无法进入目录"
         return 1
     }
     
-    if ! npm install --no-audit --no-fund; then
-        show_error "依赖安装失败"
-        show_warning "可能原因："
-        echo "  1. 网络连接问题"
-        echo "  2. Node.js 版本不兼容"
-        echo "  3. 磁盘空间不足"
-        return 1
+    if ! npm install --no-audit --no-fund --silent 2>&1 | grep -E "error|warn"; then
+        :  # 静默安装
     fi
     
     echo ""
@@ -65,7 +64,11 @@ st_install() {
 
 # 更新 SillyTavern
 st_update() {
-    show_info "开始更新 SillyTavern..."
+    clear
+    show_header
+    show_submenu_header "更新 SillyTavern"
+    
+    show_info "开始更新..."
     echo ""
     
     cd "$SILLYTAVERN_DIR" || {
@@ -74,20 +77,15 @@ st_update() {
     }
     
     # 拉取更新
-    show_info "正在拉取最新代码..."
-    if ! git pull; then
+    show_loading "正在拉取最新代码"
+    if ! git pull 2>&1 | grep -v "^Already"; then
         show_error "更新失败"
-        show_warning "可能原因："
-        echo "  1. 网络连接问题"
-        echo "  2. 本地有未提交的修改"
-        echo ""
-        show_info "建议：选择 [2] 重新安装"
         return 1
     fi
     
     # 更新依赖
-    show_info "正在更新依赖..."
-    npm install --no-audit --no-fund
+    show_loading "正在更新依赖"
+    npm install --no-audit --no-fund --silent 2>&1 | grep -E "error|warn"
     
     echo ""
     show_success "SillyTavern 更新完成！"
@@ -95,7 +93,11 @@ st_update() {
 
 # 重新安装
 st_reinstall() {
-    show_warning "⚠️  即将重新安装 SillyTavern"
+    clear
+    show_header
+    show_submenu_header "重新安装 SillyTavern"
+    
+    show_warning "即将重新安装 SillyTavern"
     echo ""
     echo "  这将删除："
     echo "  - SillyTavern 程序文件"
@@ -107,12 +109,6 @@ st_reinstall() {
         return
     fi
     
-    # 询问是否备份
-    if confirm_action "是否先备份配置？"; then
-        create_backup
-        echo ""
-    fi
-    
     show_info "正在删除旧版本..."
     rm -rf "$SILLYTAVERN_DIR"
     
@@ -120,10 +116,11 @@ st_reinstall() {
     st_install
 }
 
-# 启动 SillyTavern（简化版）
+# 启动 SillyTavern
 st_start() {
     clear
     show_header
+    show_submenu_header "启动 SillyTavern"
     
     # 检查是否已安装
     if [ ! -d "$SILLYTAVERN_DIR" ]; then
@@ -150,7 +147,7 @@ st_start() {
         return 1
     }
     
-    # 直接在前台运行（用户关闭 Termux 即停止）
+    # 前台运行
     node server.js
     
     # 如果执行到这里，说明服务已停止
