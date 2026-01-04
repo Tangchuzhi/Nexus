@@ -9,13 +9,13 @@ settings_menu() {
     while true; do
         clear
         show_header
-        colorize "⚙️  系统设置" "$COLOR_BOLD"
-        echo "───────────────────────────────────────"
-        echo ""
+        show_submenu_header "系统设置"
+        
         echo "  [1] 备份与恢复"
         echo "  [2] 卸载管理"
-        echo "  [3] 自启动管理" 
+        echo "  [3] 自启动管理"
         echo "  [4] 故障排查"
+        echo ""
         echo "  [0] 返回主菜单"
         echo ""
         
@@ -24,7 +24,7 @@ settings_menu() {
         case $choice in
             1) backup_menu ;;
             2) uninstall_menu ;;
-            3) autostart_menu ;;  
+            3) autostart_menu ;;
             4) troubleshoot_menu ;;
             0) return ;;
             *) show_error "无效选项" ;;
