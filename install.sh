@@ -78,95 +78,34 @@ check_dependencies() {
 
 install_nexus() {
     print_info "开始安装 Nexus..."
-    echo ""
     
     local install_dir="$HOME/nexus"
     
     # 检查是否已安装
     if [ -d "$install_dir" ]; then
         print_warning "检测到已安装的 Nexus"
-        echo ""
-        echo "  安装目录: $install_dir"
-        echo ""
-        echo "  [1] 覆盖安装（删除旧版本）"
-        echo "  [2] 仅修复软链接"
-        echo "  [0] 取消安装"
-        echo ""
-        
-        read -p "请选择 [0-2]: " choice
-        
-        case $choice in
-            1)
-                print_info "正在删除旧版本..."
-                rm -rf "$install_dir"
-                ;;
-            2)
-                print_info "跳过下载，仅修复软链接..."
-                setup_symlink
-                finish_install
-                return 0
-                ;;
-            *)
-                print_info "取消安装"
-                exit 0
-                ;;
-        esac
+        read -p "是否覆盖安装？(y/N): " confirm
+        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+            print_info "取消安装"
+            exit 0
+        fi
+        rm -rf "$install_dir"
     fi
     
     # 克隆仓库
     print_info "正在下载 Nexus..."
-    if ! git clone https://github.com/Tangchuzhi/Nexus.git "$install_dir"; then
+    if ! git clone https://github.com/Tangchuzhi/Nexus.git "$install_dir" 2>&1 | grep -v "^Cloning"; then
         print_error "下载失败，请检查网络"
         exit 1
     fi
     
-    print_success "下载完成"
+    # 设置权限
+    chmod +x "$install_dir/nexus.sh"
     
-    # 设置权限和软链接
-    setup_symlink
-}
-
-# ============================================
-# 设置软链接
-# ============================================
-
-setup_symlink() {
-    local install_dir="$HOME/nexus"
-    local nexus_script="$install_dir/nexus.sh"
-    local bin_link="$PREFIX/bin/nexus"
+    # 创建软链接
+    ln -sf "$install_dir/nexus.sh" "$PREFIX/bin/nexus"
     
-    print_info "配置 Nexus..."
-    
-    # 检查脚本是否存在
-    if [ ! -f "$nexus_script" ]; then
-        print_error "找不到 nexus.sh 文件"
-        exit 1
-    fi
-    
-    # 设置执行权限
-    chmod +x "$nexus_script"
-    print_success "设置执行权限"
-    
-    # 删除旧的软链接
-    if [ -L "$bin_link" ] || [ -f "$bin_link" ]; then
-        rm -f "$bin_link"
-    fi
-    
-    # 创建新的软链接
-    if ln -sf "$nexus_script" "$bin_link"; then
-        print_success "创建软链接: $bin_link"
-    else
-        print_error "创建软链接失败"
-        exit 1
-    fi
-    
-    # 验证软链接
-    if [ -L "$bin_link" ] && [ -x "$bin_link" ]; then
-        print_success "软链接验证成功"
-    else
-        print_error "软链接验证失败"
-        exit 1
-    fi
+    print_success "Nexus 安装完成"
 }
 
 # ============================================
@@ -211,32 +150,16 @@ finish_install() {
     echo ""
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    print_success "Nexus 已成功安装"
-    echo ""
-    print_info "安装信息："
-    echo "  安装目录: $HOME/nexus"
-    echo "  命令路径: $PREFIX/bin/nexus"
+    print_success "Nexus 已成功安装到: $HOME/nexus"
     echo ""
     print_info "使用方法："
     echo "  1. 输入 'nexus' 启动管理终端"
     echo "  2. 或重新打开 Termux 自动启动"
     echo ""
     
-    # 验证命令
-    if command -v nexus &> /dev/null; then
-        print_success "命令验证成功"
-        echo ""
-        read -p "是否立即启动 Nexus？(Y/n): " start_now
-        if [[ ! "$start_now" =~ ^[Nn]$ ]]; then
-            echo ""
-            exec nexus
-        fi
-    else
-        print_error "命令验证失败"
-        echo ""
-        print_info "请尝试手动修复："
-        echo "  ln -sf ~/nexus/nexus.sh \$PREFIX/bin/nexus"
-        echo "  nexus"
+    read -p "是否立即启动 Nexus？(Y/n): " start_now
+    if [[ ! "$start_now" =~ ^[Nn]$ ]]; then
+        exec nexus
     fi
 }
 
