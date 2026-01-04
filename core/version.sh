@@ -2,7 +2,7 @@
 # 版本检查模块
 
 CACHE_DIR="$NEXUS_DIR/.cache"
-CACHE_TIMEOUT=3600  # 缓存1小时（3600秒）
+CACHE_TIMEOUT=3600  # 缓存1小时
 
 # 初始化版本缓存
 init_version_cache() {
@@ -10,37 +10,19 @@ init_version_cache() {
 }
 
 # ============================================
-# 缓存工具函数
+# 缓存工具函数（优化版）
 # ============================================
 
-# 获取文件修改时间
-get_file_mtime() {
-    local file="$1"
-    
-    if [ ! -f "$file" ]; then
-        echo "0"
-        return
-    fi
-    
-    # 尝试不同的 stat 命令格式
-    local mtime=$(stat -c %Y "$file" 2>/dev/null || stat -f %m "$file" 2>/dev/null || echo "0")
-    echo "$mtime"
-}
-
-# 检查缓存是否过期
+# 检查缓存是否过期（优化：减少文件系统调用）
 is_cache_expired() {
     local cache_file="$1"
     
-    if [ ! -f "$cache_file" ]; then
-        return 0  # 文件不存在，视为过期
-    fi
+    # 文件不存在直接返回过期
+    [ ! -f "$cache_file" ] && return 0
     
-    local current_time=$(date +%s)
-    local file_mtime=$(get_file_mtime "$cache_file")
-    local cache_age=$((current_time - file_mtime))
-    
-    if [ $cache_age -ge $CACHE_TIMEOUT ]; then
-        return 0  # 过期
+    # 使用 find 命令一次性判断（比 stat 更高效）
+    if find "$cache_file" -mmin +60 2>/dev/null | grep -q .; then
+        return 0  # 过期（超过60分钟）
     else
         return 1  # 未过期
     fi
@@ -50,11 +32,21 @@ is_cache_expired() {
 # SillyTavern 版本管理
 # ============================================
 
-# 获取 SillyTavern 本地版本
+# 获取 SillyTavern 本地版本（优化：减少jq调用）
 get_st_local_version() {
     local st_dir="$SILLYTAVERN_DIR"
-    if [ -f "$st_dir/package.json" ]; then
-        jq -r '.version' "$st_dir/package.json" 2>/dev/null || echo "未安装"
+    local package_file="$st_dir/package.json"
+    
+    if [ ! -f "$package_file" ]; then
+        echo "未安装"
+        return
+    fi
+    
+    # 使用 grep 替代 jq（更轻量）
+    local version=$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$package_file" 2>/dev/null | cut -d'"' -f4)
+    
+    if [ -n "$version" ]; then
+        echo "$version"
     else
         echo "未安装"
     fi
@@ -64,18 +56,18 @@ get_st_local_version() {
 get_st_remote_version() {
     local cache_file="$CACHE_DIR/st_version"
     
-    # 如果缓存未过期，直接返回
+    # 缓存未过期，直接返回
     if ! is_cache_expired "$cache_file"; then
         cat "$cache_file" 2>/dev/null || echo ""
         return
     fi
     
-    # 缓存过期，同步更新
-    local version=$(timeout 5 curl -s --connect-timeout 3 \
+    # 缓存过期，同步更新（添加更严格的超时）
+    local version=$(timeout 5 curl -s --connect-timeout 2 --max-time 4 \
         "https://api.github.com/repos/SillyTavern/SillyTavern/releases/latest" \
-        2>/dev/null | jq -r '.tag_name' 2>/dev/null)
+        2>/dev/null | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
     
-    if [ -n "$version" ] && [ "$version" != "null" ]; then
+    if [ -n "$version" ]; then
         echo "$version" > "$cache_file"
         echo "$version"
     else
@@ -88,18 +80,18 @@ get_st_remote_version() {
 # Nexus 版本管理
 # ============================================
 
-# 获取 Nexus 远程版本
+# 获取 Nexus 远程版本（带智能缓存）
 get_nexus_remote_version() {
     local cache_file="$CACHE_DIR/nexus_version"
     
-    # 如果缓存未过期，直接返回
+    # 缓存未过期，直接返回
     if ! is_cache_expired "$cache_file"; then
         cat "$cache_file" 2>/dev/null || echo ""
         return
     fi
     
     # 缓存过期，同步更新
-    local version=$(timeout 5 curl -s --connect-timeout 3 \
+    local version=$(timeout 5 curl -s --connect-timeout 2 --max-time 4 \
         "https://raw.githubusercontent.com/Tangchuzhi/Nexus/main/VERSION" \
         2>/dev/null | tr -d '[:space:]')
     
@@ -123,19 +115,14 @@ refresh_version_cache() {
     rm -f "$CACHE_DIR/st_version"
     rm -f "$CACHE_DIR/nexus_version"
     
-    # 重新获取（显示进度）
-    echo -n "  检查 SillyTavern 版本..."
+    # 重新获取
     get_st_remote_version > /dev/null 2>&1
-    echo " ✓"
-    
-    echo -n "  检查 Nexus 版本..."
     get_nexus_remote_version > /dev/null 2>&1
-    echo " ✓"
     
     show_success "版本信息已刷新"
 }
 
-# 获取 SillyTavern 状态
+# 获取 SillyTavern 状态（仅在需要时调用）
 get_st_status() {
     if pgrep -f "node.*server.js" > /dev/null 2>&1; then
         echo "running"
@@ -153,15 +140,13 @@ get_cache_remaining_time() {
         return
     fi
     
-    local current_time=$(date +%s)
-    local file_mtime=$(get_file_mtime "$cache_file")
-    local cache_age=$((current_time - file_mtime))
-    local remaining=$((CACHE_TIMEOUT - cache_age))
+    # 使用 find 获取文件年龄（分钟）
+    local age=$(find "$cache_file" -mmin +0 -printf "%Cm\n" 2>/dev/null | head -1)
+    local remaining=$((60 - age))
     
     if [ $remaining -le 0 ]; then
         echo "已过期"
     else
-        local minutes=$((remaining / 60))
-        echo "${minutes}分钟后刷新"
+        echo "${remaining}分钟后刷新"
     fi
 }
