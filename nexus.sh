@@ -79,8 +79,15 @@ main_menu() {
             3) backup_menu ;;
             4) nexus_management_menu ;;
             5) troubleshoot_menu ;;
-            0) exit 0 ;;
-            *) show_error "无效选项" ;;
+            0) 
+                colorize "👋 再见！" "$COLOR_GREEN"
+                rm -f "$LOCK_FILE"  # 手动清理锁文件
+                exit 0
+                ;;
+            *) 
+                show_error "无效选项"
+                sleep 1
+                ;;
         esac
         
         read -p "按任意键继续..." -n 1
