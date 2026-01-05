@@ -226,9 +226,9 @@ fi"
     fi
     
     echo ""
-    print_info "自启动说明："
+    print_info "💡 提示："
     echo "  - 每次打开 Termux 将自动启动 Nexus"
-    echo "  - 可在 [系统设置] → [自启动管理] 中关闭"
+    echo "  - 可在 Nexus 主菜单 → [4] Nexus 管理 → [3] 自启动管理 中关闭"
     echo ""
 }
 
