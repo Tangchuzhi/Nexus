@@ -7,9 +7,21 @@ set -e
 # 路径配置
 # ============================================
 
-NEXUS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 🔧 获取脚本真实路径
+SCRIPT_PATH="${BASH_SOURCE[0]}"
 
-# 🔧 从 VERSION 文件读取版本号
+# 如果是软链接，解析到真实路径
+while [ -L "$SCRIPT_PATH" ]; do
+    SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
+    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+    # 如果是相对路径，需要拼接目录
+    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+
+# 获取脚本所在的真实目录
+NEXUS_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
+
+# 从 VERSION 文件读取版本号
 if [ -f "$NEXUS_DIR/VERSION" ]; then
     NEXUS_VERSION=$(cat "$NEXUS_DIR/VERSION" | tr -d '[:space:]')
 else
@@ -20,7 +32,7 @@ fi
 # 🔒 进程锁 - 防止多次启动
 # ============================================
 
-# 使用 Nexus 内部目录存储锁文件（更安全）
+# 使用 Nexus 内部目录存储锁文件
 LOCK_FILE="$NEXUS_DIR/.lock"
 
 # 检查是否已有实例在运行
@@ -118,7 +130,7 @@ main_menu() {
         5) troubleshoot_menu ;;
         0) 
             colorize "👋 再见！" "$COLOR_GREEN"
-            rm -f "$LOCK_FILE" 
+            rm -f "$LOCK_FILE"  # 手动清理锁文件
             exit 0
             ;;
         *) 
