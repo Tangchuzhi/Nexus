@@ -42,36 +42,32 @@ show_separator() {
 }
 
 # 显示版本信息
-show_version_info() {
+show_version_info_cached() {
     echo ""
     colorize "📦 版本信息" "$COLOR_BOLD"
     echo ""
     
     # SillyTavern 版本
-    local st_local=$(get_st_local_version)
-    local st_remote=$(get_st_remote_version)
-    
     echo -n "  SillyTavern: "
-    if [ "$st_local" == "未安装" ]; then
-        colorize "$st_local" "$COLOR_GRAY"
+    if [ "$CACHED_ST_LOCAL" == "未安装" ]; then
+        colorize "$CACHED_ST_LOCAL" "$COLOR_GRAY"
     else
-        echo -n "$st_local"
-        if [ -n "$st_remote" ] && [ "$st_local" != "$st_remote" ]; then
-            colorize " → $st_remote" "$COLOR_YELLOW"
+        echo -n "$CACHED_ST_LOCAL"
+        if [ -n "$CACHED_ST_REMOTE" ] && [ "$CACHED_ST_LOCAL" != "$CACHED_ST_REMOTE" ]; then
+            colorize " → $CACHED_ST_REMOTE" "$COLOR_YELLOW"
         else
             colorize " ✓" "$COLOR_GREEN"
         fi
     fi
     
     # Nexus 版本
-    local nexus_remote=$(get_nexus_remote_version)
     echo -n "  Nexus: v$NEXUS_VERSION"
     
-    if [ -n "$nexus_remote" ]; then
-        if [ "$NEXUS_VERSION" == "$nexus_remote" ]; then
+    if [ -n "$CACHED_NEXUS_REMOTE" ]; then
+        if [ "$NEXUS_VERSION" == "$CACHED_NEXUS_REMOTE" ]; then
             colorize " ✓" "$COLOR_GREEN"
         else
-            colorize " → v$nexus_remote" "$COLOR_YELLOW"
+            colorize " → v$CACHED_NEXUS_REMOTE" "$COLOR_YELLOW"
         fi
     else
         echo ""
@@ -90,7 +86,7 @@ show_menu_options() {
     echo "  [0] 退出"
 }
 
-# 显示子菜单头部（统一风格）
+# 显示子菜单头部
 show_submenu_header() {
     local title="$1"
     echo ""
@@ -98,7 +94,7 @@ show_submenu_header() {
     echo ""
 }
 
-# 显示加载动画（优化版，减少sleep调用）
+# 显示加载动画
 show_loading() {
     local message="$1"
     echo -n "$message"
