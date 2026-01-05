@@ -20,13 +20,24 @@ source "$NEXUS_DIR/modules/settings.sh" || { echo "错误: 无法加载 settings
 # 加载配置
 source "$NEXUS_DIR/config/nexus.conf" || { echo "错误: 无法加载 nexus.conf"; exit 1; }
 
+# 全局变量：缓存版本信息（启动时获取一次）
+CACHED_ST_LOCAL=""
+CACHED_ST_REMOTE=""
+CACHED_NEXUS_REMOTE=""
+
+# 启动时获取版本信息（仅一次）
+fetch_version_info() {
+    CACHED_ST_LOCAL=$(get_st_local_version)
+    CACHED_ST_REMOTE=$(get_st_remote_version)
+    CACHED_NEXUS_REMOTE=$(get_nexus_remote_version)
+}
+
 # 主菜单
 main_menu() {
     while true; do
-        echo "[DEBUG] CPU: $(top -bn1 | grep "Cpu(s)" | awk '{print $2}')" >> /tmp/nexusebug.log
         clear
         show_header
-        show_version_info  # 每次显示时自动检查缓存，过期则刷新
+        show_version_info_cached
         echo ""
         show_menu_options
         echo ""
@@ -53,16 +64,10 @@ nexus_update() {
     show_submenu_header "Nexus 更新"
     
     echo "  当前版本: v$NEXUS_VERSION"
+    echo "  最新版本: v${CACHED_NEXUS_REMOTE:-检查中...}"
     
-    # 强制刷新远程版本
-    show_loading "正在检查更新"
-    rm -f "$NEXUS_DIR/.cache/nexus_version"
-    local remote_version=$(get_nexus_remote_version)
-    
-    if [ -n "$remote_version" ]; then
-        echo "  最新版本: v$remote_version"
-        
-        if [ "$NEXUS_VERSION" == "$remote_version" ]; then
+    if [ -n "$CACHED_NEXUS_REMOTE" ]; then
+        if [ "$NEXUS_VERSION" == "$CACHED_NEXUS_REMOTE" ]; then
             echo ""
             show_success "已是最新版本"
         fi
@@ -84,7 +89,6 @@ nexus_update() {
         0) return ;;
     esac
 }
-
 
 # 执行更新
 nexus_do_update() {
@@ -124,4 +128,5 @@ nexus_reinstall() {
 
 # 启动程序
 init_nexus
+fetch_version_info
 main_menu
