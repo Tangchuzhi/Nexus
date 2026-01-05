@@ -1,36 +1,12 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Nexus - SillyTavern 管理工具
+# Nexus - SillyTavern 管理终端
 
-set -e
-
-# ============================================
-# 路径配置
-# ============================================
-
-# 🔧 获取脚本真实路径
-SCRIPT_PATH="${BASH_SOURCE[0]}"
-
-# 如果是软链接，解析到真实路径
-while [ -L "$SCRIPT_PATH" ]; do
-    SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
-    SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
-    # 如果是相对路径，需要拼接目录
-    [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
-done
-
-# 获取脚本所在的真实目录
-NEXUS_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)"
+# 获取脚本真实路径
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+NEXUS_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
 # 从 VERSION 文件读取版本号
-if [ -f "$NEXUS_DIR/VERSION" ]; then
-    NEXUS_VERSION=$(cat "$NEXUS_DIR/VERSION" | tr -d '[:space:]')
-else
-    NEXUS_VERSION="unknown"
-fi
-
-# ============================================
-# 🔒 进程锁 - 防止多次启动
-# ============================================
+NEXUS_VERSION=$(cat "$NEXUS_DIR/VERSION" 2>/dev/null | tr -d '[:space:]' || echo "未知版本")
 
 # 使用 Nexus 内部目录存储锁文件
 LOCK_FILE="$NEXUS_DIR/.lock"
@@ -58,92 +34,60 @@ echo $ > "$LOCK_FILE"
 # 设置退出时自动清理锁文件
 trap "rm -f $LOCK_FILE" EXIT INT TERM
 
-# ============================================
-# 加载模块
-# ============================================
+# 加载核心模块
+source "$NEXUS_DIR/core/ui.sh" || { echo "错误: 无法加载 ui.sh"; exit 1; }
+source "$NEXUS_DIR/core/utils.sh" || { echo "错误: 无法加载 utils.sh"; exit 1; }
+source "$NEXUS_DIR/core/version.sh" || { echo "错误: 无法加载 version.sh"; exit 1; }
 
-source "$NEXUS_DIR/core/ui.sh"
-source "$NEXUS_DIR/core/utils.sh"
-source "$NEXUS_DIR/core/version.sh"
-source "$NEXUS_DIR/modules/tavern/lifecycle.sh"
-source "$NEXUS_DIR/modules/tavern/runtime.sh"
-source "$NEXUS_DIR/modules/tavern/backup.sh"
-source "$NEXUS_DIR/modules/manager.sh"
-source "$NEXUS_DIR/modules/diagnose.sh"
+# 加载功能模块
+source "$NEXUS_DIR/modules/tavern/lifecycle.sh" || { echo "错误: 无法加载 lifecycle.sh"; exit 1; }
+source "$NEXUS_DIR/modules/tavern/backup.sh" || { echo "错误: 无法加载 backup.sh"; exit 1; }
+source "$NEXUS_DIR/modules/tavern/runtime.sh" || { echo "错误: 无法加载 runtime.sh"; exit 1; }
+source "$NEXUS_DIR/modules/diagnose.sh" || { echo "错误: 无法加载 diagnose.sh"; exit 1; }
+source "$NEXUS_DIR/modules/manager.sh" || { echo "错误: 无法加载 manager.sh"; exit 1; }
 
-# ============================================
-# 初始化
-# ============================================
+# 加载配置
+source "$NEXUS_DIR/config/nexus.conf" || { echo "错误: 无法加载 nexus.conf"; exit 1; }
 
-init_nexus
+# 全局变量：缓存版本信息（启动时获取一次）
+CACHED_ST_LOCAL=""
+CACHED_ST_REMOTE=""
+CACHED_NEXUS_REMOTE=""
 
-# 🔧 优化：仅在启动时检测一次版本，避免阻塞
-CACHED_ST_LOCAL=$(get_st_local_version)
-CACHED_ST_REMOTE=$(get_st_remote_version)
-CACHED_NEXUS_REMOTE=$(get_nexus_remote_version)
-
-# ============================================
-# 主菜单
-# ============================================
-
-main_menu() {
-    clear
-    show_header
-    
-    # 显示状态信息
-    show_status_info
-    
-    echo ""
-    colorize "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$COLOR_CYAN"
-    echo ""
-    
-    # SillyTavern 工具区
-    colorize "  🍺 SillyTavern 工具" "$COLOR_BOLD"
-    echo ""
-    echo "  [1] SillyTavern 启动"
-    echo "  [2] SillyTavern 管理"
-    echo "  [3] 备份与恢复"
-    echo ""
-    
-    colorize "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$COLOR_CYAN"
-    echo ""
-    
-    # Nexus 工具区
-    colorize "  🔧 Nexus 工具" "$COLOR_BOLD"
-    echo ""
-    echo "  [4] Nexus 管理"
-    echo "  [5] 故障诊断"
-    echo ""
-    
-    colorize "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$COLOR_CYAN"
-    echo ""
-    echo "  [0] 退出"
-    echo ""
-    
-    read -p "$(colorize "请选择 [0-5]: " "$COLOR_CYAN")" choice
-    
-    case $choice in
-        1) st_start ;;
-        2) st_management_menu ;;
-        3) backup_menu ;;
-        4) nexus_management_menu ;;
-        5) troubleshoot_menu ;;
-        0) 
-            colorize "👋 再见！" "$COLOR_GREEN"
-            rm -f "$LOCK_FILE"  # 手动清理锁文件
-            exit 0
-            ;;
-        *) 
-            show_error "无效选项"
-            sleep 1
-            ;;
-    esac
+# 启动时获取版本信息（仅一次）
+fetch_version_info() {
+    CACHED_ST_LOCAL=$(get_st_local_version)
+    CACHED_ST_REMOTE=$(get_st_remote_version)
+    CACHED_NEXUS_REMOTE=$(get_nexus_remote_version)
 }
 
-# ============================================
-# 主循环
-# ============================================
+# 主菜单
+main_menu() {
+    while true; do
+        clear
+        show_header
+        show_version_info_cached
+        echo ""
+        show_menu_options
+        echo ""
+        
+        read -p "$(colorize "请选择操作 [0-5]: " "$COLOR_CYAN")" choice
+        
+        case $choice in
+            1) st_start ;;
+            2) st_management_menu ;;
+            3) backup_menu ;;
+            4) nexus_management_menu ;;
+            5) troubleshoot_menu ;;
+            0) exit 0 ;;
+            *) show_error "无效选项" ;;
+        esac
+        
+        read -p "按任意键继续..." -n 1
+    done
+}
 
-while true; do
-    main_menu
-done
+# 启动程序
+init_nexus
+fetch_version_info
+main_menu
