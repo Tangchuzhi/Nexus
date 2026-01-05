@@ -585,7 +585,9 @@ troubleshoot_menu() {
     
     case $choice in
         1) setup_storage ;;
-        2) refresh_version_cache ;;
+        2) refresh_version_cache 
+           show_info "版本信息已更新，将在下次启动 Nexus 时生效"
+           ;;
         3) reinstall_dependencies ;;
         0) return ;;
     esac
@@ -712,11 +714,19 @@ reinstall_dependencies() {
 show_cache_status() {
     colorize "🕐 版本缓存状态" "$COLOR_CYAN"
     
-    local st_cache_time=$(get_cache_remaining_time "$CACHE_DIR/st_version")
-    local nexus_cache_time=$(get_cache_remaining_time "$CACHE_DIR/nexus_version")
+    if [ -f "$CACHE_DIR/st_version" ]; then
+        echo "  SillyTavern: 已缓存"
+    else
+        echo "  SillyTavern: 未缓存"
+    fi
     
-    echo "  SillyTavern: $st_cache_time"
-    echo "  Nexus: $nexus_cache_time"
+    if [ -f "$CACHE_DIR/nexus_version" ]; then
+        echo "  Nexus: 已缓存"
+    else
+        echo "  Nexus: 未缓存"
+    fi
+    
     echo ""
-    echo "  缓存有效期: 1小时"
+    echo "  💡 提示: 版本信息仅在 Nexus 启动时检查一次"
+    echo "  💡 使用 [强制刷新] 可立即更新版本信息"
 }
