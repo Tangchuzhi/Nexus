@@ -257,4 +257,74 @@ backup_list_all() {
     fi
     
     # ST自带备份
-    if [ -d "$ST_BACKUP_DIR
+    if [ -d "$ST_BACKUP_DIR" ] && [ -n "$(ls -A "$ST_BACKUP_DIR" 2>/dev/null)" ]; then
+        colorize "🎭 SillyTavern 自带备份" "$COLOR_CYAN"
+        
+        for backup in $(ls -t "$ST_BACKUP_DIR"); do
+            local backup_path="$ST_BACKUP_DIR/$backup"
+            local size=$(du -sh "$backup_path" 2>/dev/null | cut -f1)
+            
+            echo "  [$index] $backup (大小: $size)"
+            ((index++))
+            has_backup=true
+        done
+        echo ""
+    fi
+    
+    if [ "$has_backup" == false ]; then
+        show_warning "暂无备份"
+    fi
+}
+
+# 查看备份列表
+backup_list() {
+    clear
+    show_header
+    colorize "📋 备份列表" "$COLOR_BOLD"
+    echo ""
+    
+    backup_list_all
+    
+    read -p "按任意键返回..." -n 1
+}
+
+# 删除备份
+backup_delete() {
+    clear
+    show_header
+    colorize "🗑️  删除备份" "$COLOR_BOLD"
+    echo ""
+    
+    backup_list_all
+    
+    echo ""
+    read -p "请输入要删除的备份编号 (0取消): " choice
+    
+    if [ "$choice" == "0" ]; then
+        return
+    fi
+    
+    local all_backups=($(get_all_backup_names))
+    local selected_backup="${all_backups[$((choice-1))]}"
+    
+    if [ -z "$selected_backup" ]; then
+        show_error "无效的备份编号"
+        return 1
+    fi
+    
+    # 确定备份路径
+    local backup_path=""
+    if [[ "$selected_backup" == Nexus_* ]]; then
+        backup_path="$BACKUP_DIR/$selected_backup"
+    else
+        backup_path="$ST_BACKUP_DIR/$selected_backup"
+    fi
+    
+    if ! confirm_action "确认删除备份 $selected_backup？"; then
+        show_info "取消删除"
+        return
+    fi
+    
+    rm -rf "$backup_path"
+    show_success "备份已删除"
+}
