@@ -14,8 +14,11 @@ source "$NEXUS_DIR/core/utils.sh" || { echo "错误: 无法加载 utils.sh"; exi
 source "$NEXUS_DIR/core/version.sh" || { echo "错误: 无法加载 version.sh"; exit 1; }
 
 # 加载功能模块
-source "$NEXUS_DIR/modules/sillytavern.sh" || { echo "错误: 无法加载 sillytavern.sh"; exit 1; }
-source "$NEXUS_DIR/modules/settings.sh" || { echo "错误: 无法加载 settings.sh"; exit 1; }
+source "$NEXUS_DIR/modules/tavern/lifecycle.sh" || { echo "错误: 无法加载 lifecycle.sh"; exit 1; }
+source "$NEXUS_DIR/modules/tavern/backup.sh" || { echo "错误: 无法加载 backup.sh"; exit 1; }
+source "$NEXUS_DIR/modules/tavern/runtime.sh" || { echo "错误: 无法加载 runtime.sh"; exit 1; }
+source "$NEXUS_DIR/modules/diagnose.sh" || { echo "错误: 无法加载 diagnose.sh"; exit 1; }
+source "$NEXUS_DIR/modules/manager.sh" || { echo "错误: 无法加载 manager.sh"; exit 1; }
 
 # 加载配置
 source "$NEXUS_DIR/config/nexus.conf" || { echo "错误: 无法加载 nexus.conf"; exit 1; }
@@ -42,124 +45,20 @@ main_menu() {
         show_menu_options
         echo ""
         
-        read -p "$(colorize "请选择操作 [0-4]: " "$COLOR_CYAN")" choice
+        read -p "$(colorize "请选择操作 [0-5]: " "$COLOR_CYAN")" choice
         
         case $choice in
-            1) st_install_update ;;
-            2) st_start ;;
-            3) nexus_update ;;
-            4) settings_menu ;;
+            1) st_start ;;
+            2) st_management_menu ;;
+            3) backup_menu ;;
+            4) nexus_management_menu ;;
+            5) troubleshoot_menu ;;
             0) exit 0 ;;
             *) show_error "无效选项" ;;
         esac
         
         read -p "按任意键继续..." -n 1
     done
-}
-
-# Nexus 更新/重装
-nexus_update() {
-    clear
-    show_header
-    show_submenu_header "Nexus 更新"
-    
-    echo "  当前版本: v$NEXUS_VERSION"
-    echo "  最新版本: v${CACHED_NEXUS_REMOTE:-检查中...}"
-    
-    if [ -n "$CACHED_NEXUS_REMOTE" ]; then
-        if [ "$NEXUS_VERSION" == "$CACHED_NEXUS_REMOTE" ]; then
-            echo ""
-            show_success "已是最新版本"
-        fi
-    else
-        show_warning "无法获取远程版本信息"
-    fi
-    
-    echo ""
-    echo "  [1] 更新到最新版本"
-    echo "  [2] 重新安装"
-    echo "  [0] 返回"
-    echo ""
-    
-    read -p "$(colorize "请选择 [0-2]: " "$COLOR_CYAN")" choice
-    
-    case $choice in
-        1) nexus_do_update ;;
-        2) nexus_reinstall ;;
-        0) return ;;
-    esac
-}
-
-# 执行更新
-nexus_do_update() {
-    show_info "开始更新 Nexus..."
-    cd "$NEXUS_DIR"
-    
-    # 强制丢弃本地修改
-    show_info "正在重置本地修改..."
-    git reset --hard HEAD > /dev/null 2>&1
-    git clean -fd > /dev/null 2>&1
-    
-    # 拉取最新版本
-    show_info "正在拉取最新版本..."
-    if git pull origin main; then
-        chmod +x nexus.sh
-        
-        # 清除版本缓存，强制下次启动时重新获取
-        rm -f "$NEXUS_DIR/.cache/nexus_version"
-        rm -f "$NEXUS_DIR/.cache/st_version"
-        
-        show_success "Nexus 更新完成！"
-        show_info "请重新启动 Nexus 以应用更新"
-        
-        if confirm_action "是否立即重启？"; then
-            exec "$NEXUS_DIR/nexus.sh"
-        fi
-    else
-        show_error "更新失败，请检查网络"
-        return 1
-    fi
-}
-
-# 重新安装
-nexus_reinstall() {
-    show_warning "这将重新下载 Nexus，当前配置将保留"
-    if ! confirm_action "确认重新安装？"; then
-        return
-    fi
-    
-    # 备份配置
-    local backup_conf="/tmp/nexus.conf.bak"
-    [ -f "$NEXUS_DIR/config/nexus.conf" ] && cp "$NEXUS_DIR/config/nexus.conf" "$backup_conf"
-    
-    # 删除旧版本
-    cd "$HOME"
-    rm -rf "$NEXUS_DIR"
-    
-    # 克隆最新版本
-    show_info "正在下载最新版本..."
-    if git clone --depth=1 https://github.com/Tangchuzhi/Nexus.git "$NEXUS_DIR"; then
-        # 恢复配置
-        [ -f "$backup_conf" ] && cp "$backup_conf" "$NEXUS_DIR/config/nexus.conf"
-        
-        # 设置权限
-        chmod +x "$NEXUS_DIR/nexus.sh"
-        ln -sf "$NEXUS_DIR/nexus.sh" "$PREFIX/bin/nexus"
-        
-        show_success "Nexus 重新安装完成！"
-        
-        if confirm_action "是否立即重启？"; then
-            exec "$NEXUS_DIR/nexus.sh"
-        fi
-    else
-        show_error "下载失败，请检查网络"
-        
-        # 尝试恢复配置
-        [ -f "$backup_conf" ] && [ -d "$NEXUS_DIR" ] && \
-            cp "$backup_conf" "$NEXUS_DIR/config/nexus.conf"
-        
-        return 1
-    fi
 }
 
 # 启动程序
