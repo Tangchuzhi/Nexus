@@ -23,6 +23,7 @@ source "$NEXUS_DIR/config/nexus.conf" || { echo "错误: 无法加载 nexus.conf
 # 主菜单
 main_menu() {
     while true; do
+        echo "[DEBUG] CPU: $(top -bn1 | grep "Cpu(s)" | awk '{print $2}')" >> /tmp/nexusebug.log
         clear
         show_header
         show_version_info  # 每次显示时自动检查缓存，过期则刷新
