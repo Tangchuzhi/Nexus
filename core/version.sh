@@ -108,18 +108,38 @@ get_nexus_remote_version() {
 # 工具函数
 # ============================================
 
-# 强制刷新版本缓存
+# 强制刷新版本缓存（仅此处绕过 CDN）
 refresh_version_cache() {
-    show_info "正在刷新版本信息..."
+    show_info "正在强制刷新版本信息..."
     
+    # 删除本地缓存
     rm -f "$CACHE_DIR/st_version"
     rm -f "$CACHE_DIR/nexus_version"
     
-    # 重新获取
-    get_st_remote_version > /dev/null 2>&1
-    get_nexus_remote_version > /dev/null 2>&1
+    # 强制获取最新版本（添加时间戳绕过 GitHub CDN 缓存）
+    local timestamp=$(date +%s)
+    
+    # SillyTavern 版本
+    local st_ver=$(timeout 5 curl -s --connect-timeout 2 --max-time 4 \
+        "https://api.github.com/repos/SillyTavern/SillyTavern/releases/latest?t=${timestamp}" \
+        2>/dev/null | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+    
+    if [ -n "$st_ver" ]; then
+        echo "$st_ver" > "$CACHE_DIR/st_version"
+    fi
+    
+    # Nexus 版本
+    local nexus_ver=$(timeout 5 curl -s --connect-timeout 2 --max-time 4 \
+        "https://raw.githubusercontent.com/Tangchuzhi/Nexus/main/VERSION?t=${timestamp}" \
+        2>/dev/null | tr -d '[:space:]')
+    
+    if [ -n "$nexus_ver" ]; then
+        echo "$nexus_ver" > "$CACHE_DIR/nexus_version"
+    fi
     
     show_success "版本信息已刷新"
+    show_info "SillyTavern 最新版: ${st_ver:-获取失败}"
+    show_info "Nexus 最新版: ${nexus_ver:-获取失败}"
 }
 
 # 获取 SillyTavern 状态（仅在需要时调用）
