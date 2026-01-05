@@ -10,6 +10,7 @@ COLOR_YELLOW='\033[1;33m'
 COLOR_BLUE='\033[0;34m'
 COLOR_CYAN='\033[0;36m'
 COLOR_GRAY='\033[0;90m'
+COLOR_MAGENTA='\033[0;35m'
 
 # 颜色输出
 colorize() {
@@ -74,15 +75,25 @@ show_version_info_cached() {
     fi
 }
 
-# 显示菜单选项
+# 显示主菜单选项
 show_menu_options() {
+    colorize "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$COLOR_GRAY"
     echo ""
-    colorize "📋 功能菜单" "$COLOR_BOLD"
+    colorize "🍺 SillyTavern 工具" "$COLOR_MAGENTA"
     echo ""
-    echo "  [1] SillyTavern 安装/更新"
-    echo "  [2] SillyTavern 启动"
-    echo "  [3] Nexus 更新/重装"
-    echo "  [4] Nexus 系统设置"
+    echo "  [1] SillyTavern 启动"
+    echo "  [2] SillyTavern 管理"
+    echo "  [3] 备份与恢复"
+    echo ""
+    colorize "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$COLOR_GRAY"
+    echo ""
+    colorize "🔧 Nexus 工具" "$COLOR_CYAN"
+    echo ""
+    echo "  [4] Nexus 管理"
+    echo "  [5] 故障诊断"
+    echo ""
+    colorize "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$COLOR_GRAY"
+    echo ""
     echo "  [0] 退出"
 }
 
