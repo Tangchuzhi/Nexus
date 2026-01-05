@@ -8,13 +8,20 @@ set -e
 # ============================================
 
 NEXUS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NEXUS_VERSION="1.0.2"
+
+# 🔧 从 VERSION 文件读取版本号
+if [ -f "$NEXUS_DIR/VERSION" ]; then
+    NEXUS_VERSION=$(cat "$NEXUS_DIR/VERSION" | tr -d '[:space:]')
+else
+    NEXUS_VERSION="unknown"
+fi
 
 # ============================================
 # 🔒 进程锁 - 防止多次启动
 # ============================================
 
-LOCK_FILE="/tmp/nexus.lock"
+# 使用 Nexus 内部目录存储锁文件（更安全）
+LOCK_FILE="$NEXUS_DIR/.lock"
 
 # 检查是否已有实例在运行
 if [ -f "$LOCK_FILE" ]; then
@@ -111,7 +118,7 @@ main_menu() {
         5) troubleshoot_menu ;;
         0) 
             colorize "👋 再见！" "$COLOR_GREEN"
-            rm -f "$LOCK_FILE"  # 手动清理锁文件
+            rm -f "$LOCK_FILE" 
             exit 0
             ;;
         *) 
