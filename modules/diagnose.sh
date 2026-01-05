@@ -175,8 +175,4 @@ show_cache_status() {
     else
         echo "  Nexus: 未缓存"
     fi
-    
-    echo ""
-    echo "  💡 提示: 版本信息仅在 Nexus 启动时检查一次"
-    echo "  💡 使用 [强制刷新] 可立即更新版本信息"
 }
