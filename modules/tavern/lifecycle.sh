@@ -62,6 +62,14 @@ st_install() {
     show_success "网络连接正常"
     echo ""
     
+    # 🔧 修复：切换到安全的工作目录
+    cd "$HOME" || {
+        show_error "无法切换到主目录"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    }
+    
     # 克隆仓库
     show_info "正在克隆仓库（可能需要几分钟）..."
     echo ""
@@ -104,7 +112,7 @@ st_install() {
     
     echo ""
     show_success "SillyTavern 安装完成！"
-    show_info "使用 [1] SillyTavern 启动 来运行"
+    show_info "返回主菜单，选择 [1] SillyTavern 启动 即可运行"
     echo ""
     read -p "按任意键继续..." -n 1
 }
@@ -117,6 +125,14 @@ st_update() {
     
     show_info "开始更新..."
     echo ""
+    
+    # 🔧 修复：先切换到安全目录，再进入 ST 目录
+    cd "$HOME" || {
+        show_error "无法切换到主目录"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    }
     
     cd "$SILLYTAVERN_DIR" || {
         show_error "SillyTavern 目录不存在"
@@ -183,6 +199,12 @@ st_uninstall() {
         backup_create
         echo ""
     fi
+    
+    # 🔧 修复：卸载前先切换到安全目录
+    cd "$HOME" || {
+        show_error "无法切换到主目录"
+        return 1
+    }
     
     if safe_remove_dir "$SILLYTAVERN_DIR" "SillyTavern"; then
         show_success "SillyTavern 已完全卸载"
