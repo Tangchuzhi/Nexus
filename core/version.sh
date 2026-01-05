@@ -13,19 +13,14 @@ init_version_cache() {
 # 缓存工具函数（优化版）
 # ============================================
 
-# 检查缓存是否过期（优化：减少文件系统调用）
+# 检查缓存是否过期
 is_cache_expired() {
     local cache_file="$1"
-    
-    # 文件不存在直接返回过期
     [ ! -f "$cache_file" ] && return 0
     
-    # 使用 find 命令一次性判断（比 stat 更高效）
-    if find "$cache_file" -mmin +60 2>/dev/null | grep -q .; then
-        return 0  # 过期（超过60分钟）
-    else
-        return 1  # 未过期
-    fi
+    local now=$(date +%s)
+    local mtime=$(stat -c %Y "$cache_file" 2>/dev/null || echo 0)
+    [ $((now - mtime)) -gt 3600 ] && return 0 || return 1
 }
 
 # ============================================
