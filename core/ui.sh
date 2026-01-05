@@ -62,7 +62,7 @@ show_version_info_cached() {
     fi
     
     # Nexus 版本
-    echo -n "  Nexus: v$NEXUS_VERSION"
+    echo -n "  Nexus: $NEXUS_VERSION"
     
     if [ -n "$CACHED_NEXUS_REMOTE" ]; then
         if [ "$NEXUS_VERSION" == "$CACHED_NEXUS_REMOTE" ]; then
