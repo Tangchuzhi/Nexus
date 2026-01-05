@@ -94,15 +94,30 @@ nexus_update() {
 nexus_do_update() {
     show_info "开始更新 Nexus..."
     cd "$NEXUS_DIR"
-    git pull origin main || {
+    
+    # 强制丢弃本地修改
+    show_info "正在重置本地修改..."
+    git reset --hard HEAD > /dev/null 2>&1
+    git clean -fd > /dev/null 2>&1
+    
+    # 拉取最新版本
+    show_info "正在拉取最新版本..."
+    if git pull origin main; then
+        chmod +x nexus.sh
+        
+        # 清除版本缓存，强制下次启动时重新获取
+        rm -f "$NEXUS_DIR/.cache/nexus_version"
+        rm -f "$NEXUS_DIR/.cache/st_version"
+        
+        show_success "Nexus 更新完成！"
+        show_info "请重新启动 Nexus 以应用更新"
+        
+        if confirm_action "是否立即重启？"; then
+            exec "$NEXUS_DIR/nexus.sh"
+        fi
+    else
         show_error "更新失败，请检查网络"
         return 1
-    }
-    chmod +x nexus.sh
-    show_success "Nexus 更新完成！"
-    show_info "请重新启动 Nexus 以应用更新"
-    if confirm_action "是否立即重启？"; then
-        exec "$NEXUS_DIR/nexus.sh"
     fi
 }
 
@@ -112,17 +127,38 @@ nexus_reinstall() {
     if ! confirm_action "确认重新安装？"; then
         return
     fi
+    
+    # 备份配置
     local backup_conf="/tmp/nexus.conf.bak"
     [ -f "$NEXUS_DIR/config/nexus.conf" ] && cp "$NEXUS_DIR/config/nexus.conf" "$backup_conf"
+    
+    # 删除旧版本
     cd "$HOME"
     rm -rf "$NEXUS_DIR"
-    git clone https://github.com/Tangchuzhi/Nexus.git "$NEXUS_DIR"
-    [ -f "$backup_conf" ] && cp "$backup_conf" "$NEXUS_DIR/config/nexus.conf"
-    chmod +x "$NEXUS_DIR/nexus.sh"
-    ln -sf "$NEXUS_DIR/nexus.sh" "$PREFIX/bin/nexus"
-    show_success "Nexus 重新安装完成！"
-    if confirm_action "是否立即重启？"; then
-        exec "$NEXUS_DIR/nexus.sh"
+    
+    # 克隆最新版本
+    show_info "正在下载最新版本..."
+    if git clone --depth=1 https://github.com/Tangchuzhi/Nexus.git "$NEXUS_DIR"; then
+        # 恢复配置
+        [ -f "$backup_conf" ] && cp "$backup_conf" "$NEXUS_DIR/config/nexus.conf"
+        
+        # 设置权限
+        chmod +x "$NEXUS_DIR/nexus.sh"
+        ln -sf "$NEXUS_DIR/nexus.sh" "$PREFIX/bin/nexus"
+        
+        show_success "Nexus 重新安装完成！"
+        
+        if confirm_action "是否立即重启？"; then
+            exec "$NEXUS_DIR/nexus.sh"
+        fi
+    else
+        show_error "下载失败，请检查网络"
+        
+        # 尝试恢复配置
+        [ -f "$backup_conf" ] && [ -d "$NEXUS_DIR" ] && \
+            cp "$backup_conf" "$NEXUS_DIR/config/nexus.conf"
+        
+        return 1
     fi
 }
 
