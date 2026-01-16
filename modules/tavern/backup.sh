@@ -26,8 +26,6 @@ backup_menu() {
         4) backup_delete ;;
         0) return ;;
     esac
-    
-    read -p "按任意键继续..." -n 1
 }
 
 # 获取用户账户列表
