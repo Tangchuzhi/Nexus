@@ -90,7 +90,6 @@ main_menu() {
                 ;;
         esac
         
-        read -p "按任意键继续..." -n 1
     done
 }
 
