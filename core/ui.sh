@@ -111,3 +111,18 @@ show_loading() {
     echo -n "$message"
     echo " ..."
 }
+
+# 显示免责声明
+show_disclaimer() {
+    echo -e "${COLOR_GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}"
+    echo -e "⚠️  ${COLOR_YELLOW}${COLOR_BOLD}免责声明 & 版权协议${COLOR_RESET}"
+    echo ""
+    echo -e "  ${COLOR_GRAY}•${COLOR_RESET} 本项目仅供 ${COLOR_GREEN}AI学习与技术交流${COLOR_RESET} 使用"
+    echo -e "  ${COLOR_GRAY}•${COLOR_RESET} ${COLOR_RED}严禁${COLOR_RESET} 将本项目用于任何商业用途"
+    echo -e "  ${COLOR_GRAY}•${COLOR_RESET} 协议遵循: ${COLOR_CYAN}CC BY-NC-ND 4.0${COLOR_RESET}"
+    echo -e "    ${COLOR_GRAY}(署名-非商业性使用-禁止演绎)${COLOR_RESET}"
+    echo ""
+    echo -e "  ${COLOR_MAGENTA}👤 作者:${COLOR_RESET} 唐初稚 (Discord)"
+    echo -e "  ${COLOR_MAGENTA}🏝️ 发布:${COLOR_RESET} 游鹿小岛"
+    echo -e "${COLOR_GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLOR_RESET}"
+}
