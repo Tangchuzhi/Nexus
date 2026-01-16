@@ -79,8 +79,6 @@ st_management_menu() {
             *) show_error "无效选项" ;;
         esac
     fi
-    
-    read -p "按任意键继续..." -n 1
 }
 
 # 安装 SillyTavern
