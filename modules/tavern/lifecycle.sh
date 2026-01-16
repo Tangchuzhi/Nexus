@@ -17,9 +17,9 @@ show_license_agreement() {
     local C_BLUE='\033[1;34m'
     local C_RED='\033[1;31m'
 
-    echo -e "${C_CYAN}======================================================${C_RESET}"
+    echo -e "${C_CYAN}===================================================${C_RESET}"
     echo -e "${C_WHITE}         Nexus Installer${C_RESET}"
-    echo -e "${C_CYAN}======================================================${C_RESET}"
+    echo -e "${C_CYAN}===================================================${C_RESET}"
     echo ""
     echo -e "${C_YELLOW} 【开源协议说明】${C_RESET}"
     echo -e " 本封装/安装脚本采用 CC BY-NC-ND 4.0 协议发布："
@@ -34,7 +34,7 @@ show_license_agreement() {
     echo -e "${C_RED} 【重要警告】${C_RESET}"
     echo -e " 本脚本完全免费！若你是购买所得，请立刻退款并举报。"
     echo ""
-    echo -e "${C_CYAN}======================================================${C_RESET}"
+    echo -e "${C_CYAN}===================================================${C_RESET}"
     echo ""
 
     # 交互确认
