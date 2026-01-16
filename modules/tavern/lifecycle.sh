@@ -4,6 +4,48 @@
 ST_REPO="https://github.com/SillyTavern/SillyTavern.git"
 SILLYTAVERN_DIR="$HOME/SillyTavern"
 
+# ==========================================
+# 新增：许可协议显示函数
+# ==========================================
+show_license_agreement() {
+    clear
+    # 定义局部颜色变量，确保颜色准确显示
+    local C_RESET='\033[0m'
+    local C_CYAN='\033[0;36m'
+    local C_WHITE='\033[1;37m'
+    local C_YELLOW='\033[1;33m'
+    local C_BLUE='\033[1;34m'
+    local C_RED='\033[1;31m'
+
+    echo -e "${C_CYAN}======================================================${C_RESET}"
+    echo -e "${C_WHITE}         Nexus Installer${C_RESET}"
+    echo -e "${C_CYAN}======================================================${C_RESET}"
+    echo ""
+    echo -e "${C_YELLOW} 【开源协议说明】${C_RESET}"
+    echo -e " 本封装/安装脚本采用 CC BY-NC-ND 4.0 协议发布："
+    echo -e " - 署名(BY)：必须提到作者“唐初稚”，发布“游鹿小岛”。"
+    echo -e " - 非商业(NC)：禁止任何形式的商业化销售或营利。"
+    echo -e " - 禁止演绎(ND)：不允许分发修改后的二次封装版本。"
+    echo ""
+    echo -e "${C_BLUE} 【署名】${C_RESET}"
+    echo -e " 作者：唐初稚 (Discord)"
+    echo -e " 发布：游鹿小岛"
+    echo ""
+    echo -e "${C_RED} 【重要警告】${C_RESET}"
+    echo -e " 本脚本完全免费！若你是购买所得，请立刻退款并举报。"
+    echo ""
+    echo -e "${C_CYAN}======================================================${C_RESET}"
+    echo ""
+
+    # 交互确认
+    local choice
+    read -p "是否接受上述协议并继续安装？[y/N]: " choice
+    case "$choice" in 
+        y|Y) return 0 ;; # 返回成功状态
+        *) return 1 ;;   # 返回失败状态
+    esac
+}
+
 # SillyTavern 管理菜单
 st_management_menu() {
     clear
@@ -43,6 +85,18 @@ st_management_menu() {
 
 # 安装 SillyTavern
 st_install() {
+    # ==========================================
+    # 修改：在安装开始前插入协议检查
+    # ==========================================
+    if ! show_license_agreement; then
+        echo ""
+        show_warning "用户拒绝了协议，安装已取消。"
+        echo ""
+        read -p "按任意键返回..." -n 1
+        return 1
+    fi
+    # ==========================================
+
     clear
     show_header
     show_submenu_header "安装 SillyTavern"
