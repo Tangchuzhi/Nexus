@@ -34,8 +34,6 @@ nexus_management_menu() {
         3) nexus_autostart_menu ;;
         0) return ;;
     esac
-    
-    read -p "按任意键继续..." -n 1
 }
 
 # 执行更新
@@ -167,8 +165,6 @@ nexus_autostart_menu() {
             ;;
         0) return ;;
     esac
-    
-    read -p "按任意键继续..." -n 1
 }
 
 # 启用自启动
