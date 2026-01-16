@@ -66,7 +66,6 @@ main_menu() {
     while true; do
         clear
         show_header
-        show_disclaimer 
         show_version_info_cached
         echo ""
         show_menu_options
