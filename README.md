@@ -14,7 +14,7 @@ Nexus 是一个基于纯 Shell 语言编写的轻量级管理工具，旨在为 
 在 Termux 中复制并执行以下命令：
 
 ```bash
-pkg update -y && pkg install curl git nodejs jq -y && curl -L https://raw.githubusercontent.com/Tangchuzhi/Nexus/main/install.sh | bash
+pkg update -y && pkg upgrade -y && pkg install curl git nodejs jq -y && curl -L https://raw.githubusercontent.com/Tangchuzhi/Nexus/main/install.sh | bash
 ```
 
 ---
