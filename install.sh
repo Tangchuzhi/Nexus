@@ -132,6 +132,12 @@ install_dependencies() {
         fi
     fi
     
+    # 升级已安装的包（避免依赖冲突）
+    print_info "升级系统包（可能需要 2-3 分钟）..."
+    pkg upgrade -y 2>&1 | grep -E "(Reading|Unpacking|Setting up)" | tail -5 || {
+        print_warning "部分包升级失败，继续安装..."
+    }
+    
     # 安装依赖包
     print_info "安装依赖包..."
     if ! pkg install -y git nodejs jq curl 2>&1 | grep -E "(Unpacking|Setting up)" | tail -5; then
