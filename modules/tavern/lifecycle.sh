@@ -221,13 +221,18 @@ st_update() {
     if [ -z "$current_branch" ]; then
         show_warning "检测到「分离 HEAD」状态（版本回退后的正常现象）"
         show_info "正在从 GitHub 拉取最新代码并强制切换回主分支..."
-        git fetch origin 2>/dev/null
-        if git checkout -B release origin/release 2>/dev/null; then
+        if ! git fetch origin; then
+            show_error "fetch 失败，请检查网络连接"
+            echo ""
+            read -p "按任意键继续..." -n 1
+            return 1
+        fi
+        if git checkout -f -B release origin/release 2>/dev/null; then
             current_branch="release"
-        elif git checkout -B main origin/main 2>/dev/null; then
+        elif git checkout -f -B main origin/main 2>/dev/null; then
             current_branch="main"
         else
-            show_error "无法连接远程仓库或分支不存在，请检查网络"
+            show_error "远程仓库中未找到 release 或 main 分支"
             echo ""
             read -p "按任意键继续..." -n 1
             return 1
