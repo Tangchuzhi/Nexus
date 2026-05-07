@@ -54,15 +54,19 @@ st_management_menu() {
     
     if [ -d "$SILLYTAVERN_DIR" ]; then
         echo "  [1] 更新 SillyTavern"
-        echo "  [2] 卸载 SillyTavern"
+        echo "  [2] 回退到旧版本"
+        echo "  [3] 更新设置"
+        echo "  [4] 卸载 SillyTavern"
         echo "  [0] 返回"
         echo ""
         
-        read -p "$(colorize "请选择 [0-2]: " "$COLOR_CYAN")" choice
+        read -p "$(colorize "请选择 [0-4]: " "$COLOR_CYAN")" choice
         
         case $choice in
             1) st_update ;;
-            2) st_uninstall ;;
+            2) st_rollback ;;
+            3) nexus_settings_menu ;;
+            4) st_uninstall ;;
             0) return ;;
             *) show_error "无效选项" ;;
         esac
@@ -203,18 +207,57 @@ st_update() {
     fi
     echo ""
     
-    # 拉取更新
-    show_info "正在拉取最新代码..."
-    echo ""
-    
-    if ! git pull; then
+    # 保存 config.yaml（如果开启了自动保留）
+    local saved_config=""
+    if [ "$AUTO_PRESERVE_CONFIG" == "true" ] && [ -f "$SILLYTAVERN_DIR/config.yaml" ]; then
+        saved_config=$(cat "$SILLYTAVERN_DIR/config.yaml")
+        show_info "已保存 config.yaml 配置"
         echo ""
-        show_error "更新失败，请检查网络连接"
+    fi
+
+    # 检测并修复分离 HEAD（版本回退后的状态）
+    local current_branch
+    current_branch=$(git branch --show-current 2>/dev/null)
+    if [ -z "$current_branch" ]; then
+        show_warning "检测到「分离 HEAD」状态（版本回退后的正常现象）"
+        show_info "正在自动切换回 release 分支..."
+        if ! git checkout release 2>/dev/null && ! git checkout main 2>/dev/null; then
+            show_error "无法切换回主分支，请手动执行: git checkout release"
+            echo ""
+            read -p "按任意键继续..." -n 1
+            return 1
+        fi
+        current_branch=$(git branch --show-current 2>/dev/null)
+        show_success "已切换回 $current_branch 分支"
+        echo ""
+    fi
+
+    # 拉取更新
+    show_info "正在同步最新代码 (git fetch + reset)..."
+    echo ""
+
+    if ! git fetch origin; then
+        echo ""
+        show_error "fetch 失败，请检查网络连接"
         echo ""
         read -p "按任意键继续..." -n 1
         return 1
     fi
-    
+
+    if ! git reset --hard "origin/$current_branch"; then
+        echo ""
+        show_error "代码同步失败"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    fi
+
+    # 还原 config.yaml
+    if [ -n "$saved_config" ]; then
+        echo "$saved_config" > "$SILLYTAVERN_DIR/config.yaml"
+        show_success "✓ 已还原 config.yaml 自定义配置"
+    fi
+
     echo ""
     show_info "正在更新依赖..."
     echo ""
@@ -229,6 +272,152 @@ st_update() {
     
     echo ""
     show_success "SillyTavern 更新完成！"
+    echo ""
+    read -p "按任意键继续..." -n 1
+}
+
+# 回退到旧版本
+st_rollback() {
+    clear
+    show_header
+    show_submenu_header "回退 SillyTavern 版本"
+
+    if [ ! -d "$SILLYTAVERN_DIR" ]; then
+        show_error "SillyTavern 未安装"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    fi
+
+    # 检查网络
+    show_info "检查 GitHub 连接..."
+    if ! ping -c 1 -W 5 github.com &> /dev/null; then
+        show_error "无法连接到 GitHub，请检查网络"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    fi
+    show_success "网络连接正常"
+    echo ""
+
+    cd "$HOME" || return 1
+    cd "$SILLYTAVERN_DIR" || {
+        show_error "无法进入目录: $SILLYTAVERN_DIR"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    }
+
+    # 显示当前版本
+    local current_ver
+    current_ver=$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo "未知")
+    show_info "当前版本: $current_ver"
+    echo ""
+
+    # 拉取远端标签
+    show_info "正在获取历史版本列表..."
+    echo ""
+    git fetch --tags --quiet 2>/dev/null
+
+    local tags=()
+    mapfile -t tags < <(git tag --sort=-version:refname 2>/dev/null | head -20)
+
+    if [ ${#tags[@]} -eq 0 ]; then
+        show_error "未能获取版本列表"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    fi
+
+    # 显示版本列表
+    show_info "可用历史版本 (最近 ${#tags[@]} 个):"
+    echo ""
+    local i=1
+    for tag in "${tags[@]}"; do
+        local date_str
+        date_str=$(git log -1 --format="%ai" "$tag" 2>/dev/null | cut -d' ' -f1)
+        echo "  [$i] $tag  $date_str"
+        ((i++))
+    done
+    echo "  [0] 取消"
+    echo ""
+
+    read -p "$(colorize "请选择版本 [0-${#tags[@]}]: " "$COLOR_CYAN")" choice
+
+    if [ "$choice" == "0" ] || [ -z "$choice" ]; then
+        show_info "取消回退"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return
+    fi
+
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#tags[@]}" ]; then
+        show_error "无效选项"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    fi
+
+    local selected_tag="${tags[$((choice-1))]}"
+    echo ""
+    show_warning "将回退到版本: $selected_tag"
+    echo ""
+
+    # 建议备份
+    if confirm_action "建议先备份当前数据，是否备份？"; then
+        backup_create
+        echo ""
+    fi
+
+    if ! confirm_action "确认回退到 $selected_tag？"; then
+        show_info "取消回退"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return
+    fi
+
+    echo ""
+    show_info "正在切换到版本 $selected_tag..."
+    echo ""
+
+    # 回退前保存 config.yaml
+    local saved_config_rb=""
+    if [ "$AUTO_PRESERVE_CONFIG" == "true" ] && [ -f "$SILLYTAVERN_DIR/config.yaml" ]; then
+        saved_config_rb=$(cat "$SILLYTAVERN_DIR/config.yaml")
+        show_info "已保存 config.yaml 配置"
+        echo ""
+    fi
+
+    if ! git checkout "$selected_tag"; then
+        echo ""
+        show_error "切换版本失败！"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    fi
+
+    # 还原 config.yaml
+    if [ -n "$saved_config_rb" ]; then
+        echo "$saved_config_rb" > "$SILLYTAVERN_DIR/config.yaml"
+        show_success "✓ 已还原 config.yaml 自定义配置"
+    fi
+
+    echo ""
+    show_info "正在重新安装依赖..."
+    echo ""
+
+    if ! npm install; then
+        echo ""
+        show_error "依赖安装失败"
+        echo ""
+        read -p "按任意键继续..." -n 1
+        return 1
+    fi
+
+    echo ""
+    show_success "已成功回退到版本: $selected_tag"
+    show_warning "当前处于「分离 HEAD」状态，这是正常现象"
+    show_info "若要升级到最新版本，选择 SillyTavern 管理 → 更新"
     echo ""
     read -p "按任意键继续..." -n 1
 }
