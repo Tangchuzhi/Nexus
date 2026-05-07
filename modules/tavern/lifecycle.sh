@@ -220,15 +220,19 @@ st_update() {
     current_branch=$(git branch --show-current 2>/dev/null)
     if [ -z "$current_branch" ]; then
         show_warning "检测到「分离 HEAD」状态（版本回退后的正常现象）"
-        show_info "正在自动切换回 release 分支..."
-        if ! git checkout release 2>/dev/null && ! git checkout main 2>/dev/null; then
-            show_error "无法切换回主分支，请手动执行: git checkout release"
+        show_info "正在从 GitHub 拉取最新代码并强制切换回主分支..."
+        git fetch origin 2>/dev/null
+        if git checkout -B release origin/release 2>/dev/null; then
+            current_branch="release"
+        elif git checkout -B main origin/main 2>/dev/null; then
+            current_branch="main"
+        else
+            show_error "无法连接远程仓库或分支不存在，请检查网络"
             echo ""
             read -p "按任意键继续..." -n 1
             return 1
         fi
-        current_branch=$(git branch --show-current 2>/dev/null)
-        show_success "已切换回 $current_branch 分支"
+        show_success "已切换回 $current_branch 分支（已同步远程最新）"
         echo ""
     fi
 
