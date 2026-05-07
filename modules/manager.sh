@@ -36,6 +36,51 @@ nexus_management_menu() {
     esac
 }
 
+# 更新设置菜单
+nexus_settings_menu() {
+    while true; do
+        clear
+        show_header
+        show_submenu_header "更新设置"
+
+        local cfg_label
+        if [ "$AUTO_PRESERVE_CONFIG" == "true" ]; then
+            cfg_label="$(colorize "已开启" "$COLOR_GREEN")"
+        else
+            cfg_label="$(colorize "已关闭" "$COLOR_GRAY")"
+        fi
+
+        echo -e "  [1] 更新/回退时自动保留 config.yaml  [$cfg_label]"
+        echo ""
+        show_info "config.yaml 包含：端口、白名单、密码等自定义配置"
+        show_info "开启后 git 操作不会覆盖你的设置"
+        echo ""
+        echo "  [0] 返回"
+        echo ""
+
+        read -p "$(colorize "请选择 [0-1]: " "$COLOR_CYAN")" choice
+        case $choice in
+            1) _toggle_preserve_config ;;
+            0) return ;;
+            *) show_error "无效选项"; sleep 1 ;;
+        esac
+    done
+}
+
+_toggle_preserve_config() {
+    local conf_file="$NEXUS_DIR/config/nexus.conf"
+    if [ "$AUTO_PRESERVE_CONFIG" == "true" ]; then
+        AUTO_PRESERVE_CONFIG=false
+        sed -i 's/^AUTO_PRESERVE_CONFIG=.*/AUTO_PRESERVE_CONFIG=false/' "$conf_file"
+        show_warning "已关闭：更新/回退时不再自动保留 config.yaml"
+    else
+        AUTO_PRESERVE_CONFIG=true
+        sed -i 's/^AUTO_PRESERVE_CONFIG=.*/AUTO_PRESERVE_CONFIG=true/' "$conf_file"
+        show_success "已开启：更新/回退时将自动保留 config.yaml"
+    fi
+    sleep 1
+}
+
 # 执行更新
 nexus_update() {
     show_info "开始更新 Nexus..."
